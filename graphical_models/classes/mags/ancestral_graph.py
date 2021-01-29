@@ -1,10 +1,10 @@
 from collections import defaultdict
-from causaldag.utils import core_utils
+from graphical_models.utils import core_utils
 import itertools as itr
 import numpy as np
 import random
 from typing import List, Iterable, Set, Dict, Hashable, Tuple, FrozenSet, Union
-from causaldag.classes.custom_types import Node, DirectedEdge, BidirectedEdge, UndirectedEdge, NodeSet, warn_untested
+from graphical_models.custom_types import Node, DirectedEdge, BidirectedEdge, UndirectedEdge, NodeSet, warn_untested
 
 
 class CycleError(Exception):

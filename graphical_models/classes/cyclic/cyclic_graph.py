@@ -1,5 +1,5 @@
 from collections import defaultdict
-from causaldag.utils import core_utils
+from graphical_models.utils import core_utils
 import itertools as itr
 import numpy as np
 

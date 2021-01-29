@@ -1,9 +1,9 @@
-from causaldag.classes import UndirectedGraph
+from .undirected_graph import UndirectedGraph
 import itertools as itr
 import numpy as np
 from numpy.linalg import inv
 from numpy import sqrt, diag, eye
-from causaldag.utils import core_utils
+from graphical_models.utils import core_utils
 from numpy.random import multivariate_normal
 
 

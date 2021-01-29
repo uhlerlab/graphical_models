@@ -5,9 +5,9 @@
 from collections import defaultdict
 import numpy as np
 import itertools as itr
-from causaldag.utils import core_utils
+from graphical_models.utils import core_utils
 import operator as op
-from causaldag.classes.custom_types import Node, DirectedEdge, NodeSet, warn_untested
+from graphical_models.custom_types import Node, DirectedEdge, NodeSet, warn_untested
 from typing import Set, Union, Tuple, Any, Iterable, Dict, FrozenSet, List
 import networkx as nx
 from networkx.utils import UnionFind

@@ -1,4 +1,4 @@
-from causaldag.utils.core_utils import to_set
+from graphical_models.utils.core_utils import to_set
 from graphical_models.custom_types import Node
 from typing import Set, Union, List, Optional
 from collections import defaultdict

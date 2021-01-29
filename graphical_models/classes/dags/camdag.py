@@ -1,6 +1,6 @@
-from causaldag.classes import DAG
+from .dag import DAG
 import numpy as np
-from causaldag.utils import core_utils
+from graphical_models.utils import core_utils
 from typing import Callable, Dict, Hashable, Optional
 from tqdm import tqdm
 

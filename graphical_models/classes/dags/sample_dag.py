@@ -1,8 +1,8 @@
-from causaldag.classes import DAG
+from .dag import DAG
 import numpy as np
-from causaldag.utils import core_utils
+from graphical_models.utils import core_utils
 from typing import Callable
-from causaldag.classes.interventions import Intervention, SoftInterventionalDistribution, PerfectInterventionalDistribution
+from graphical_models.classes.interventions import Intervention, SoftInterventionalDistribution, PerfectInterventionalDistribution
 from tqdm import trange
 
 
@@ -27,7 +27,7 @@ class SampleDAG(DAG):
                 samples[sample_num, node_ix] = self.conditionals[node](samples[sample_num, parent_ixs])
         return samples
 
-    def sample_interventional(self, intervention: Intervention, nsamples: int = 1) -> np.ndarray:
+    def sample_interventional(self, intervention, nsamples: int = 1) -> np.ndarray:
         samples = np.zeros((nsamples, len(self._nodes)))
 
         t = self.topological_sort()

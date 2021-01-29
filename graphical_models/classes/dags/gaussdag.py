@@ -12,11 +12,11 @@ from numpy.linalg import inv
 from scipy.linalg import cholesky
 from scipy.stats import norm
 
-from causaldag.classes import DAG
-from causaldag.classes.interventions import Intervention, SoftInterventionalDistribution, \
+from .dag import DAG
+from ..interventions import Intervention, SoftInterventionalDistribution, \
     PerfectInterventionalDistribution, PerfectIntervention, SoftIntervention, GaussIntervention, BinaryIntervention, \
     MultinomialIntervention, ConstantIntervention
-from causaldag.utils import core_utils
+from graphical_models.utils import core_utils
 
 
 class GaussDAG(DAG):

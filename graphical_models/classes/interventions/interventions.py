@@ -55,7 +55,7 @@ class ShiftIntervention(SoftInterventionalDistribution):
     shift: float
 
     def sample(self, parent_values: Optional[np.ndarray], dag, node) -> np.ndarray:
-        from causaldag import GaussDAG, SampleDAG
+        from graphical_models import GaussDAG, SampleDAG
         if isinstance(dag, GaussDAG):
             nsamples, nparents = parent_values.shape
             node_ix = dag._node2ix[node]

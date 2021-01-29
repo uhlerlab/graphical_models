@@ -3,7 +3,7 @@ from copy import deepcopy
 import numpy as np
 # from cvxopt import spmatrix
 from networkx import Graph
-from causaldag.classes.custom_types import Node, UndirectedEdge
+from graphical_models.custom_types import Node, UndirectedEdge
 from typing import Set, Iterable, Dict
 
 
