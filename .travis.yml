@@ -1,0 +1,23 @@
+language:
+  python
+after_success:
+  bash <(curl -s https://codecov.io/bash)
+
+# Disable sudo to speed up the build
+sudo: false
+
+
+# Set the python version to 2.7
+python: 3.8
+
+# Install the codecov pip dependency
+install:
+  - pip install codecov
+
+# Run the unit test
+script:
+  - coverage run -m unittest discover
+
+## Push the results back to codecov
+#after_success:
+#  - codecov
