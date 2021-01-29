@@ -117,7 +117,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> g = cd.AncestralGraph()
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph()
         >>> g.add_node(1)
         >>> g.add_node(2)
         >>> len(g.nodes)

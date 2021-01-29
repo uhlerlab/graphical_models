@@ -92,8 +92,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={('a', 'b'), ('b', 'c')})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={('a', 'b'), ('b', 'c')})
         >>> g2 = g.rename_nodes({'a': 1, 'b': 2, 'c': 3})
         >>> g2.arcs
         {(1, 2), (2, 3)}
@@ -119,8 +119,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> d = cd.DAG(arcs={(1, 2), (2, 3), (1, 4)})
+        >>> from graphical_models import DAG
+        >>> d = DAG(arcs={(1, 2), (2, 3), (1, 4)})
         >>> d_induced = d.induced_subgraph({1, 2, 3})
         >>> d_induced.arcs
         {(1, 2), (2, 3)}
@@ -197,8 +197,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (2, 3)})
         >>> g.parents_of(2)
         {1}
         >>> g.parents_of({2, 3})
@@ -224,8 +224,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (2, 3)})
         >>> g.children_of(1)
         {2}
         >>> g.children_of({1, 2})
@@ -251,8 +251,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(0,1), (0,2)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(0,1), (0,2)})
         >>> g.neighbors_of(0)
         {1, 2}
         >>> g.neighbors_of(2)
@@ -283,8 +283,8 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(0, 1), (1, 3), (2, 3), (3, 4})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(0, 1), (1, 3), (2, 3), (3, 4})
         >>> g.markov_blanket_of(1)
         {0, 2, 3}
         """
@@ -303,8 +303,8 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (1, 3), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (1, 3), (2, 3)})
         >>> g.is_ancestor_of(1, 3)
         True
         >>> g.is_ancestor_of(3, 1)
@@ -338,8 +338,8 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (2, 3)})
         >>> g.descendants_of(1)
         {2, 3}
         """
@@ -376,8 +376,8 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (2, 3)})
         >>> g.ancestors_of(3)
         {1, 2, 3}
         """
@@ -408,8 +408,8 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (1, 3), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (1, 3), (2, 3)})
         >>> g.incident_arcs(2)
         {(1, 2), (2, 3)}
         """
@@ -440,8 +440,8 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (1, 3), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (1, 3), (2, 3)})
         >>> g.incoming_arcs(2)
         {(1, 2)}
         """
@@ -470,8 +470,8 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (1, 3), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (1, 3), (2, 3)})
         >>> g.outgoing_arcs(2)
         {(2, 3)}
         """
@@ -500,8 +500,8 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (1, 3), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (1, 3), (2, 3)})
         >>> g.outdegree_of(1)
         2
         >>> g.outdegree_of(3)
@@ -529,8 +529,8 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (1, 3), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (1, 3), (2, 3)})
         >>> g.indegree_of(1)
         0
         >>> g.indegree_of(2)
@@ -550,8 +550,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (2, 3)})
         >>> g.topological_sort
         [1, 2, 3]
         """
@@ -576,8 +576,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (1, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (1, 3)})
         >>> g.is_topological([1, 2, 3])
         True
         >>> g.is_topological([1, 3, 2])
@@ -600,8 +600,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (1, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (1, 3)})
         >>> g.permutation_score([1, 2, 3])
         0
         >>> g.permutation_score([2, 1, 3])
@@ -628,8 +628,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG()
+        >>> from graphical_models import DAG
+        >>> g = DAG()
         >>> g.add_node(1)
         >>> g.add_node(2)
         >>> len(g.nodes)
@@ -652,8 +652,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG({1, 2})
+        >>> from graphical_models import DAG
+        >>> g = DAG({1, 2})
         >>> g.add_nodes_from({'a', 'b'})
         >>> g.add_nodes_from(range(3, 6))
         >>> g.nodes
@@ -675,8 +675,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2)})
         >>> g.remove_node(2)
         >>> g.nodes
         {1}
@@ -719,8 +719,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG({1, 2})
+        >>> from graphical_models import DAG
+        >>> g = DAG({1, 2})
         >>> g.add_arc(1, 2)
         >>> g.arcs
         {(1, 2)}
@@ -759,8 +759,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2)})
         >>> g.add_arcs_from({(1, 3), (2, 3)})
         >>> g.arcs
         {(1, 2), (1, 3), (2, 3)}
@@ -803,8 +803,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2)})
         >>> g.remove_arc(1, 2)
         >>> g.arcs
         set()
@@ -834,8 +834,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (2, 3), (3, 4)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (2, 3), (3, 4)})
         >>> g.remove_arcs_from({(1, 2), (2, 3)})
         >>> g.arcs
         {(3, 4)}
@@ -860,8 +860,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2)})
         >>> g.reverse_arc(1, 2)
         >>> g.arcs
         {(2, 1)}
@@ -900,8 +900,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(0,1), (0,2)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(0,1), (0,2)})
         >>> g.has_arc(0, 1)
         True
         >>> g.has_arc(1, 2)
@@ -920,8 +920,8 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (1, 3), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (1, 3), (2, 3)})
         >>> g.sources()
         {1}
         """
@@ -938,8 +938,8 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (1, 3), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (1, 3), (2, 3)})
         >>> g.sinks()
         {3}
         """
@@ -957,8 +957,8 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (1, 3), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (1, 3), (2, 3)})
         >>> g.reversible_arcs()
         {(1, 2), (2, 3)}
         """
@@ -985,8 +985,8 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (1, 3), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (1, 3), (2, 3)})
         >>> g.is_reversible(1, 2)
         True
         >>> g.is_reversible(1, 3)
@@ -1007,8 +1007,8 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 3), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 3), (2, 3)})
         >>> g.arcs_in_vstructures()
         {(1, 3), (2, 3))
         """
@@ -1028,8 +1028,8 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 3), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 3), (2, 3)})
         >>> g.vstructures()
         {(1, 3, 2)}
         """
@@ -1051,8 +1051,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 3), (2, 3), (1, 2)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 3), (2, 3), (1, 2)})
         >>> g.triples()
         {frozenset({1, 3, 2})}
         """
@@ -1094,9 +1094,9 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g1 = cd.DAG(arcs={(1, 2), (2, 3)})
-        >>> g2 = cd.DAG(arcs={(2, 1), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g1 = DAG(arcs={(1, 2), (2, 3)})
+        >>> g2 = DAG(arcs={(2, 1), (2, 3)})
         >>> g1.shd(g2)
         1
         """
@@ -1126,14 +1126,14 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g1 = cd.DAG(arcs={(1, 2), (2, 3)})
-        >>> g2 = cd.DAG(arcs={(2, 1), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g1 = DAG(arcs={(1, 2), (2, 3)})
+        >>> g2 = DAG(arcs={(2, 1), (2, 3)})
         >>> g1.shd_skeleton(g2)
         0
 
-        >>> g1 = cd.DAG(arcs={(1, 2)})
-        >>> g2 = cd.DAG(arcs={(1, 2), (2, 3)})
+        >>> g1 = DAG(arcs={(1, 2)})
+        >>> g2 = DAG(arcs={(1, 2), (2, 3)})
         >>> g1.shd_skeleton(g2)
         1
         """
@@ -1152,11 +1152,11 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> d1 = cd.DAG(arcs={(0, 1), (1, 2)})
-        >>> d2 = cd.DAG(arcs={(2, 1), (1, 0)})
-        >>> d3 = cd.DAG(arcs={(0, 1), (2, 1)})
-        >>> d4 = cd.DAG(arcs={(1, 0), (1, 2)})
+        >>> from graphical_models import DAG
+        >>> d1 = DAG(arcs={(0, 1), (1, 2)})
+        >>> d2 = DAG(arcs={(2, 1), (1, 0)})
+        >>> d3 = DAG(arcs={(0, 1), (2, 1)})
+        >>> d4 = DAG(arcs={(1, 0), (1, 2)})
         >>> d1.markov_equivalent(d2)
         True
         >>> d2.markov_equivalent(d1)
@@ -1195,12 +1195,12 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (3, 2)})
-        >>> other = cd.DAG(arcs={(1, 2)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (3, 2)})
+        >>> other = DAG(arcs={(1, 2)})
         >>> g.is_imap(other)
         True
-        >>> other = cd.DAG(arcs={(1, 2), (2, 3)})
+        >>> other = DAG(arcs={(1, 2), (2, 3)})
         >>> g.is_imap(other)
         False
         """
@@ -1234,9 +1234,9 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (3, 2)})
-        >>> other = cd.DAG(arcs={(1, 2)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (3, 2)})
+        >>> other = DAG(arcs={(1, 2)})
         >>> g.is_minimal_imap(other)
         False
         """
@@ -1269,9 +1269,9 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> d1 = cd.DAG(arcs={(0, 1), (1, 2)})
-        >>> d2 = cd.DAG(arcs={(0, 1), (2, 1), (3, 1)})
+        >>> from graphical_models import DAG
+        >>> d1 = DAG(arcs={(0, 1), (1, 2)})
+        >>> d2 = DAG(arcs={(0, 1), (2, 1), (3, 1)})
         >>> d1.chickering_distance(d2)
         3
         """
@@ -1332,9 +1332,9 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> d1 = cd.DAG(arcs={(0, 1), (1, 2)})
-        >>> d2 = cd.DAG(arcs={(0, 1), (2, 1)})
+        >>> from graphical_models import DAG
+        >>> d1 = DAG(arcs={(0, 1), (1, 2)})
+        >>> d2 = DAG(arcs={(0, 1), (2, 1)})
         >>> cm = d1.confusion_matrix(d2)
         >>> cm["mistaken_edges_for_arcs"]
         {frozenset({0, 1}), frozenset({1, 2})},
@@ -1460,13 +1460,13 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> d1 = cd.DAG(arcs={(0, 1), (1, 2)})
-        >>> d2 = cd.DAG(arcs={(0, 1), (2, 1)})
+        >>> from graphical_models import DAG
+        >>> d1 = DAG(arcs={(0, 1), (1, 2)})
+        >>> d2 = DAG(arcs={(0, 1), (2, 1)})
         >>> cm = d1.confusion_matrix_skeleton(d2)
         >>> cm["tpr"]
         1.0
-        >>> d3 = cd.DAG(arcs={(0, 1), (0, 2)})
+        >>> d3 = DAG(arcs={(0, 1), (0, 2)})
         >>> cm = d2.confusion_matrix_skeleton(d3)
         >>> cm["true_positives"]
         {frozenset({0, 1})}
@@ -1582,10 +1582,10 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
+        >>> from graphical_models import DAG
         >>> import numpy as np
         >>> amat = np.array([[0, 0, 1], [0, 0, 1], [0, 0, 0]])
-        >>> d = cd.DAG.from_amat(amat)
+        >>> d = DAG.from_amat(amat)
         >>> d.arcs
         {(0, 2), (1, 2)}
         """
@@ -1612,8 +1612,8 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (1, 3), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (1, 3), (2, 3)})
         >>> g.to_amat()[0]
         array([[0, 1, 1],
                [0, 0, 1],
@@ -1651,11 +1651,11 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
+        >>> from graphical_models import DAG
         >>> import networkx as nx
         >>> g = nx.DiGraph()
         >>> g.add_edges_from([(0, 1)])
-        >>> d = cd.DAG.from_nx(g)
+        >>> d = DAG.from_nx(g)
         >>> d.arcs
         {(0, 1)}
         """
@@ -1674,8 +1674,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> d = cd.DAG(arcs={(0, 1)})
+        >>> from graphical_models import DAG
+        >>> d = DAG(arcs={(0, 1)})
         >>> g = d.to_nx()
         >>> g.edges
         OutEdgeView([(0, 1)])
@@ -1704,12 +1704,12 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
+        >>> from graphical_models import DAG
         >>> import numpy as np
         >>> import pandas as pd
         >>> amat = np.array([[0, 1], [0, 0]])
         >>> df = pd.DataFrame(amat, index=["a", "b"], columns=["a", "b"])
-        >>> d = cd.DAG.from_dataframe(df)
+        >>> d = DAG.from_dataframe(df)
         >>> d.arcs
         {('a', 'b')}
         """
@@ -1738,8 +1738,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> d = cd.DAG(arcs={(0, 1)})
+        >>> from graphical_models import DAG
+        >>> d = DAG(arcs={(0, 1)})
         >>> d.to_dataframe()
            0  1
         0  0  1
@@ -1794,8 +1794,8 @@ class DAG:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (3, 2)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (3, 2)})
         >>> g.dsep(1, 3)
         True
         >>> g.dsep(1, 3, 2)
@@ -1869,8 +1869,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> d = cd.DAG(arcs={(0, 1), (1, 2), (2, 3), (3, 4)})
+        >>> from graphical_models import DAG
+        >>> d = DAG(arcs={(0, 1), (1, 2), (2, 3), (3, 4)})
         >>> d.dsep_from_given(0, 1)
         {2, 3, 4]
         """
@@ -2002,8 +2002,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (3, 2)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (3, 2)})
         >>> g.local_markov_statements()
         {(1, frozenset({3}), frozenset()), (2, frozenset(), frozenset({1, 3})), (3, frozenset({1}), frozenset())}
         """
@@ -2026,8 +2026,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> d = cd.DAG(arcs={(1, 3), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> d = DAG(arcs={(1, 3), (2, 3)})
         >>> ug = d.moral_graph()
         >>> ug.edges
         {frozenset({1, 3}), frozenset({2, 3}), frozenset({1, 2})}
@@ -2054,12 +2054,12 @@ class DAG:
         Returns
         -------
         m:
-            cd.AncestralGraph, the MAG resulting from marginalizing out `latent_nodes`.
+            AncestralGraph, the MAG resulting from marginalizing out `latent_nodes`.
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> d = cd.DAG(arcs={(1, 3), (1, 2)})
+        >>> from graphical_models import DAG
+        >>> d = DAG(arcs={(1, 3), (1, 2)})
         >>> mag = d.marginal_mag(latent_nodes={1})
         >>> mag
         Directed edges: set(), Bidirected edges: {frozenset({2, 3})}, Undirected edges: set()
@@ -2068,10 +2068,10 @@ class DAG:
         """
         warn_untested()  # TODO: ADD TEST
 
-        from .ancestral_graph import AncestralGraph
+        from graphical_models import AncestralGraph
 
+        latent_nodes = core_utils.to_set(latent_nodes)
         if not new:
-            latent_nodes = core_utils.to_set(latent_nodes)
 
             new_nodes = self._nodes - latent_nodes
             directed = set()
@@ -2158,21 +2158,21 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (2, 4), (3, 4)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (2, 4), (3, 4)})
         >>> cpdag = g.cpdag()
         >>> cpdag.edges
         {frozenset({1, 2})}
         >>> cpdag.arcs
         {(2, 4), (3, 4)}
         """
-        from causaldag import PDAG
+        from graphical_models import PDAG
         pdag = PDAG(nodes=self._nodes, arcs=self._arcs, known_arcs=self.arcs_in_vstructures())
         pdag.remove_unprotected_orientations()
         return pdag
 
     def cpdag_new(self, new=False):
-        from causaldag import PDAG
+        from graphical_models import PDAG
         vstruct = self.arcs_in_vstructures()
         pdag = PDAG(nodes=self._nodes, arcs=vstruct, edges=self._arcs - vstruct)
         if new:
@@ -2199,8 +2199,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.DAG(arcs={(1, 2), (2, 4), (3, 4)})
+        >>> from graphical_models import DAG
+        >>> g = DAG(arcs={(1, 2), (2, 4), (3, 4)})
         >>> cpdag = g.cpdag()
         >>> icpdag = g.interventional_cpdag([{1}], cpdag=cpdag)
         >>> icpdag.arcs
@@ -2208,7 +2208,7 @@ class DAG:
         """
         warn_untested()  # TODO: ADD TEST
 
-        from causaldag import PDAG
+        from graphical_models import PDAG
 
         if cpdag is None:
             raise ValueError('Need the CPDAG')
@@ -2251,9 +2251,9 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> d1 = cd.DAG(arcs={(1, 0), (1, 2), (2, 0)})
-        >>> d2 = cd.DAG(arcs={(2, 0), (2, 1), (1, 0)})
+        >>> from graphical_models import DAG
+        >>> d1 = DAG(arcs={(1, 0), (1, 2), (2, 0)})
+        >>> d2 = DAG(arcs={(2, 0), (2, 1), (1, 0)})
         >>> res_sinks = d1.resolved_sinks(d2)
         {0}
         """
@@ -2285,9 +2285,9 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> d1 = cd.DAG(arcs={(0, 1), (1, 2)})
-        >>> d2 = cd.DAG(arcs={(2, 0), (2, 1), (1, 0)})
+        >>> from graphical_models import DAG
+        >>> d1 = DAG(arcs={(0, 1), (1, 2)})
+        >>> d2 = DAG(arcs={(2, 0), (2, 1), (1, 0)})
         >>> sequence, moves = d1.chickering_sequence(d2)
         >>> sequence[1].arcs
         {(1, 0), (1, 2)}
@@ -2404,8 +2404,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> d = cd.DAG(arcs={(0, 1), (1, 2), (1, 3), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> d = DAG(arcs={(0, 1), (1, 2), (1, 3), (2, 3)})
         >>> dct = d.directed_clique_tree()
         >>> dct.nodes
         NodeView((frozenset({1, 2, 3}), frozenset({0, 1})))
@@ -2474,8 +2474,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> d = cd.DAG(arcs={(0, 1), (1, 2), (1, 3), (1, 4), (3, 2), (3, 4)})
+        >>> from graphical_models import DAG
+        >>> d = DAG(arcs={(0, 1), (1, 2), (1, 3), (1, 4), (3, 2), (3, 4)})
         >>> cdct = d.contracted_directed_clique_tree()
         >>> cdct.nodes
         NodeView((frozenset({frozenset({1, 2, 3}), frozenset({1, 3, 4})}), frozenset({frozenset({0, 1})})))
@@ -2518,8 +2518,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> d = cd.DAG(arcs={(0, 1), (1, 2), (1, 3), (1, 4), (3, 2), (3, 4)})
+        >>> from graphical_models import DAG
+        >>> d = DAG(arcs={(0, 1), (1, 2), (1, 3), (1, 4), (3, 2), (3, 4)})
         >>> residuals = d.residuals()
         >>> residuals
         [frozenset({2, 3, 4}), frozenset({0, 1})]
@@ -2547,8 +2547,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> d = cd.DAG(arcs={(0, 1), (1, 2), (1, 3), (1, 4), (3, 2), (3, 4)})
+        >>> from graphical_models import DAG
+        >>> d = DAG(arcs={(0, 1), (1, 2), (1, 3), (1, 4), (3, 2), (3, 4)})
         >>> r_eg = d.residual_essential_graph()
         >>> r_eg.arcs
         {(1, 2), (1, 3), (1, 4)}
@@ -2592,9 +2592,9 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
+        >>> from graphical_models import DAG
         >>> import itertools as itr
-        >>> d = cd.DAG(arcs=set(itr.combinations(range(5), 2)))
+        >>> d = DAG(arcs=set(itr.combinations(range(5), 2)))
         >>> ivs = d.optimal_fully_orienting_single_node_interventions()
         >>> ivs
         {1, 3}
@@ -2644,8 +2644,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> d = cd.DAG(arcs={(0, 1), (1, 2), (0, 2)})
+        >>> from graphical_models import DAG
+        >>> d = DAG(arcs={(0, 1), (1, 2), (0, 2)})
         >>> ivs, icpdags = d.greedy_optimal_single_node_intervention()
         >>> ivs
         [1]
@@ -2696,8 +2696,8 @@ class DAG:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> d = cd.DAG(arcs={(0, 1), (1, 2), (0, 2), (0, 3), (1, 3), (2, 3)})
+        >>> from graphical_models import DAG
+        >>> d = DAG(arcs={(0, 1), (1, 2), (0, 2), (0, 3), (1, 3), (2, 3)})
         >>> ivs, icpdags = d.greedy_optimal_fully_orienting_interventions()
         >>> ivs
         [1, 2]

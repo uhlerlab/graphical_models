@@ -28,7 +28,7 @@ class TestDAG(TestCase):
         dag = DAG(arcs={(1, 2), (1, 3), (2, 3)})
         cpdag = dag.cpdag()
         self.assertEqual(cpdag.arcs, set())
-        self.assertEqual(cpdag.edges, {(1, 2), (1, 3), (2, 3)})
+        self.assertEqual(cpdag.edges, {frozenset({1, 2}), frozenset((1, 3)), frozenset((2, 3))})
         self.assertEqual(cpdag.parents[1], set())
         self.assertEqual(cpdag.parents[2], set())
         self.assertEqual(cpdag.parents[3], set())
@@ -129,7 +129,7 @@ class TestDAG(TestCase):
         cpdag = dag.cpdag()
         int_cpdag = dag.interventional_cpdag([{1}], cpdag=cpdag)
         self.assertEqual(int_cpdag.arcs, {(1, 2), (1, 3)})
-        self.assertEqual(int_cpdag.edges, {(2, 3)})
+        self.assertEqual(int_cpdag.edges, {frozenset((2, 3))})
         self.assertEqual(int_cpdag.undirected_neighbors[1], set())
         self.assertEqual(int_cpdag.undirected_neighbors[2], {3})
         self.assertEqual(int_cpdag.undirected_neighbors[3], {2})
@@ -198,27 +198,27 @@ class TestDAG(TestCase):
 
     def test_optimal_intervention_1intervention(self):
         dag = DAG(arcs={(1, 2), (1, 3), (2, 3)})
-        best_ivs, icpdags = dag.optimal_intervention_greedy()
+        best_ivs, icpdags = dag.greedy_optimal_single_node_intervention()
         self.assertEqual(best_ivs, [2])
         self.assertEqual(icpdags[0].arcs, dag.arcs)
 
     def test_optimal_intervention_2interventions(self):
         dag = DAG(arcs={(1, 2), (1, 3), (1, 4), (1, 5), (2, 3), (2, 4), (2, 5)})
-        best_ivs, icpdags = dag.optimal_intervention_greedy(num_interventions=2)
+        best_ivs, icpdags = dag.greedy_optimal_single_node_intervention(num_interventions=2)
         self.assertEqual(best_ivs, [2, None])
         self.assertEqual(icpdags[0].arcs, dag.arcs)
         self.assertEqual(icpdags[1].arcs, dag.arcs)
 
     def test_optimal_intervention_2interventions2(self):
         dag = DAG(arcs={(1, 2), (1, 3), (2, 3), (4, 5)})
-        best_ivs, icpdags = dag.optimal_intervention_greedy(num_interventions=2)
+        best_ivs, icpdags = dag.greedy_optimal_single_node_intervention(num_interventions=2)
         self.assertEqual(best_ivs, [2, 4])
         self.assertEqual(icpdags[0].arcs, {(1, 2), (1, 3), (2, 3)})
         self.assertEqual(icpdags[1].arcs, {(1, 2), (1, 3), (2, 3), (4, 5)})
 
     def test_fully_orienting_interventions_6nodes_complete(self):
         dag = DAG(arcs={(i, j) for i, j in itr.combinations(range(6), 2)})
-        ivs, icpdags = dag.fully_orienting_interventions_greedy()
+        ivs, icpdags = dag.greedy_optimal_fully_orienting_interventions()
 
     def test_to_dag(self):
         dag = DAG(arcs={(1, 2), (2, 3)})
@@ -264,7 +264,7 @@ class TestDAG(TestCase):
         amat[2, 1] = 1
         pdag = PDAG.from_amat(amat)
         self.assertEqual(pdag.arcs, {(0, 1), (0, 2)})
-        self.assertEqual(pdag.edges, {(1, 2)})
+        self.assertEqual(pdag.edges, {frozenset((1, 2))})
 
     def test_shd(self):
         d1 = PDAG(arcs={(0, 1)})

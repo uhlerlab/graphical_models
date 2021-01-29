@@ -73,8 +73,8 @@ def directed_erdos(
 
     Examples
     --------
-    >>> import causaldag as cd
-    >>> d = cd.rand.directed_erdos(5, .5)
+    >>> from graphical_models.rand import directed_erdos
+    >>> d = directed_erdos(5, .5)
     """
     assert density is not None or exp_nbrs is not None
     density = density if density is not None else exp_nbrs / (nnodes - 1)

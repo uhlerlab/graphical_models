@@ -91,8 +91,9 @@ class UndirectedGraph:
 
         Examples
         --------
+        >>> from graphical_models import UndirectedGraph
         >>> amat = np.array([[0, 0, 1], [0, 1, 0], [0, 0, 0]])
-        >>> cd.UndirectedGraph.from_amat(amat)
+        >>> UndirectedGraph.from_amat(amat)
         TODO
         """
         edges = {(i, j) for (i, j), val in np.ndenumerate(amat) if val != 0}

@@ -730,7 +730,7 @@ class PDAG:
         --------
         TODO
         """
-        from causaldag import DAG
+        from graphical_models import DAG
 
         pdag2 = self.copy()
         arcs = set()

@@ -71,7 +71,7 @@ class AncestralGraph:
             bidirected: Set = frozenset(),
             undirected: Set = frozenset()
     ):
-        self._nodes = nodes.copy()
+        self._nodes = set(nodes)
         self._directed = set()
         self._bidirected = set()
         self._undirected = set()
@@ -126,8 +126,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph(bidirected={(1, 2), (1, 4)}, directed={(1, 3), (2, 3)})
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(bidirected={(1, 2), (1, 4)}, directed={(1, 3), (2, 3)})
         >>> g.induced_subgraph({1, 2, 3})
         Directed edges: {(2, 3), (1, 3)}, Bidirected edges: {frozenset({1, 2})}, Undirected edges: set()
         """
@@ -160,8 +160,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph()
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph()
         >>> g.add_node(1)
         >>> g.add_node(2)
         >>> len(g.nodes)
@@ -184,8 +184,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph()
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph()
         >>> g.add_nodes_from({1, 2})
         >>> len(g.nodes)
         2
@@ -219,8 +219,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph(bidirected={(1, 2), (1, 4)}, directed={(1, 3), (2, 3)})
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(bidirected={(1, 2), (1, 4)}, directed={(1, 3), (2, 3)})
         >>> g.topological_sort()
         [4, 2, 1, 3]
         """
@@ -246,8 +246,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph()
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph()
         >>> g.add_directed(1, 2)
         >>> g.directed
         {(1, 2)}
@@ -272,8 +272,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph()
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph()
         >>> g.add_bidirected(1, 2)
         >>> g.bidirected
         {frozenset({i, j})}
@@ -298,8 +298,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph()
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph()
         >>> g.add_undirected(1, 2)
         >>> g.undirected
         {frozenset({i, j})}
@@ -414,8 +414,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph(bidirected={(1, 2), (1, 4)}, directed={(1, 3), (2, 3)})
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(bidirected={(1, 2), (1, 4)}, directed={(1, 3), (2, 3)})
         >>> g.remove_node(4)
         >>> g
         Directed edges: {(2, 3), (1, 3)}, Bidirected edges: {frozenset({1, 2})}, Undirected edges: set()
@@ -465,8 +465,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph(bidirected={(1, 2), (1, 4)}, directed={(1, 3), (2, 3)})
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(bidirected={(1, 2), (1, 4)}, directed={(1, 3), (2, 3)})
         >>> g.remove_directed(1, 3)
         >>> g
         Directed edges: {(2, 3)}, Bidirected edges: {frozenset({1, 4}), frozenset({1, 2})}, Undirected edges: set()
@@ -498,8 +498,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph(bidirected={(1, 2), (1, 4)}, directed={(1, 3), (2, 3)})
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(bidirected={(1, 2), (1, 4)}, directed={(1, 3), (2, 3)})
         >>> g.remove_bidirected(1, 2)
         >>> g
         Directed edges: {(2, 3), (1, 3)}, Bidirected edges: {frozenset({1, 4})}, Undirected edges: set()
@@ -531,8 +531,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph(directed={(1, 2), (1, 3)}, undirected={(1, 4)})
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(directed={(1, 2), (1, 3)}, undirected={(1, 4)})
         >>> g.remove_undirected(1, 4)
         >>> g
         Directed edges: {(1, 2), (1, 3)}, Bidirected edges: set(), Undirected edges: set()
@@ -564,8 +564,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph(directed={(1, 2), (1, 3)}, undirected={(1, 4)})
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(directed={(1, 2), (1, 3)}, undirected={(1, 4)})
         >>> g.remove_edge(1, 4)
         >>> g
         Directed edges: {(1, 2), (1, 3)}, Bidirected edges: set(), Undirected edges: set()
@@ -594,8 +594,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph(directed={(1, 2), (1, 3)}, undirected={(1, 4)})
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(directed={(1, 2), (1, 3)}, undirected={(1, 4)})
         >>> g.remove_edges([(1, 4), (1, 2)])
         >>> g
         Directed edges: {(1, 3)}, Bidirected edges: set(), Undirected edges: set()
@@ -655,8 +655,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph(directed={(1, 2), (2, 3)}, undirected={(1, 4)})
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(directed={(1, 2), (2, 3)}, undirected={(1, 4)})
         >>> g.children_of(1)
         {2}
         >>> g.children_of({1, 2})
@@ -678,8 +678,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph(directed={(1, 2), (2, 3)}, undirected={(1, 4)})
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(directed={(1, 2), (2, 3)}, undirected={(1, 4)})
         >>> g.parents_of(2)
         {1}
         >>> g.parents_of({2, 3})
@@ -701,8 +701,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph(directed={(1, 2), (2, 3)}, bidirected={(1, 4), (2, 5)})
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(directed={(1, 2), (2, 3)}, bidirected={(1, 4), (2, 5)})
         >>> g.spouses_of(1)
         {4}
         >>> g.spouses_of({1, 2})
@@ -724,8 +724,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph(directed={(1, 3), (2, 3)}, undirected={(1, 4), (2, 5)})
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(directed={(1, 3), (2, 3)}, undirected={(1, 4), (2, 5)})
         >>> g.neighbors_of(1)
         {4}
         >>> g.neighbors_of({1, 2})
@@ -1154,8 +1154,8 @@ class AncestralGraph:
 
         Examples
         --------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph(arcs={(1, 2), (3, 2)})
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(arcs={(1, 2), (3, 2)})
         TODO
         """
         if not self.is_maximal():
@@ -1703,8 +1703,8 @@ class AncestralGraph:
 
         Example
         -------
-        >>> import causaldag as cd
-        >>> g = cd.AncestralGraph(directed={(0, 1)}, bidirected={(1, 2)})
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(directed={(0, 1)}, bidirected={(1, 2)})
         >>> g.legitimate_mark_changes()
         ({(0, 1)}, {(2, 1)})
         """

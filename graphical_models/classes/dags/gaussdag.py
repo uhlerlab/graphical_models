@@ -171,7 +171,7 @@ class GaussDAG(DAG):
             if self.weight_mat[i, j] != 0:
                 normalized_weight_mat[i, j] = B[i, j] * node_sds[i] / node_sds[j]
         # TODO: variance
-        return cd.GaussDAG.from_amat(normalized_weight_mat)
+        return GaussDAG.from_amat(normalized_weight_mat)
 
     def set_arc_weight(self, i, j, val):
         """
@@ -698,6 +698,8 @@ class GaussDAG(DAG):
 
 
 if __name__ == '__main__':
+    from graphical_models import GaussDAG, GaussIntervention
+
     iv = MultinomialIntervention(
         interventions=[
             ConstantIntervention(val=-1),
@@ -717,8 +719,8 @@ if __name__ == '__main__':
     B[0, 1] = 1
     B[0, 2] = -1
     B[1, 2] = 4
-    gdag = cd.GaussDAG.from_amat(B)
-    iv = causaldag.classes.interventions.GaussIntervention(mean=0, variance=.1)
+    gdag = GaussDAG.from_amat(B)
+    iv = GaussIntervention(mean=0, variance=.1)
     gdag.sample_interventional_perfect({0: iv}, nsamples=100)
 
     s = gdag.sample(1000)

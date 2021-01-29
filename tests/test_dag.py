@@ -1,7 +1,7 @@
 from unittest import TestCase
 import unittest
 import numpy as np
-from graphical_models import DAG
+from graphical_models import DAG, AncestralGraph, CycleError
 
 
 class TestDAG(TestCase):
@@ -69,17 +69,17 @@ class TestDAG(TestCase):
             self.assertTrue(ixs[i] < ixs[j])
 
     def test_add_arc_cycle(self):
-        with self.assertRaises(cd.CycleError) as cm:
+        with self.assertRaises(CycleError) as cm:
             self.d.add_arc(2, 1)
         self.assertEqual(cm.exception.cycle, [1, 2, 1])
-        with self.assertRaises(cd.CycleError):
+        with self.assertRaises(CycleError):
             self.d.add_arc(4, 1)
-        with self.assertRaises(cd.CycleError) as cm:
+        with self.assertRaises(CycleError) as cm:
             self.d.add_arc(5, 1)
         self.assertEqual(cm.exception.cycle, [1, 3, 5, 1])
 
     def test_interventional_cpdag_2node(self):
-        d = cd.DAG(arcs={(0, 1)})
+        d = DAG(arcs={(0, 1)})
         c = d.interventional_cpdag([{1}], cpdag=d.cpdag())
         self.assertEqual(c.arcs, {(0, 1)})
         self.assertEqual(c.edges, set())
@@ -88,10 +88,10 @@ class TestDAG(TestCase):
         self.assertEqual(c.edges, set())
 
     def test_interventional_cpdag_3node(self):
-        d = cd.DAG(arcs={(0, 1), (0, 2), (1, 2)})
+        d = DAG(arcs={(0, 1), (0, 2), (1, 2)})
         c = d.interventional_cpdag([{0}], cpdag=d.cpdag())
         self.assertEqual(c.arcs, {(0, 1), (0, 2)})
-        self.assertEqual(c.edges, {(1, 2)})
+        self.assertEqual(c.edges, {frozenset((1, 2))})
 
     # def test_reversible_arcs(self):
     #     pass
@@ -115,40 +115,40 @@ class TestDAG(TestCase):
         self.assertEqual(self.d.incident_arcs(5), {(3, 5)})
 
     def test_shd(self):
-        d1 = cd.DAG(arcs={(0, 1), (0, 2)})
-        d2 = cd.DAG(arcs={(1, 0), (1, 2)})
+        d1 = DAG(arcs={(0, 1), (0, 2)})
+        d2 = DAG(arcs={(1, 0), (1, 2)})
         self.assertEqual(d1.shd(d2), 3)
         self.assertEqual(d2.shd(d1), 3)
 
-        d1 = cd.DAG()
-        d2 = cd.DAG(arcs={(0, 1), (1, 2)})
+        d1 = DAG()
+        d2 = DAG(arcs={(0, 1), (1, 2)})
         self.assertEqual(d1.shd(d2), 2)
         self.assertEqual(d2.shd(d1), 2)
 
-        d1 = cd.DAG(arcs={(0, 1), (1, 2)})
-        d2 = cd.DAG(arcs={(0, 1), (2, 1)})
+        d1 = DAG(arcs={(0, 1), (1, 2)})
+        d2 = DAG(arcs={(0, 1), (2, 1)})
         self.assertEqual(d1.shd(d2), 1)
         self.assertEqual(d2.shd(d1), 1)
 
     def test_dsep(self):
-        d = cd.DAG(arcs={(1, 2), (2, 3)})  # chain
+        d = DAG(arcs={(1, 2), (2, 3)})  # chain
         self.assertTrue(d.dsep(1, 3, {2}))
         self.assertFalse(d.dsep(1, 3))
 
-        d = cd.DAG(arcs={(2, 1), (2, 3)})  # confounder
+        d = DAG(arcs={(2, 1), (2, 3)})  # confounder
         self.assertTrue(d.dsep(1, 3, {2}))
         self.assertFalse(d.dsep(1, 3))
 
-        d = cd.DAG(arcs={(1, 3), (2, 3)})  # v-structure
+        d = DAG(arcs={(1, 3), (2, 3)})  # v-structure
         self.assertTrue(d.dsep(1, 2))
         self.assertFalse(d.dsep(1, 2, {3}))
 
-        d = cd.DAG(arcs={(1, 3), (2, 3), (3, 4), (4, 5)})  # v-structure with chain
+        d = DAG(arcs={(1, 3), (2, 3), (3, 4), (4, 5)})  # v-structure with chain
         self.assertTrue(d.dsep(1, 2))
         self.assertFalse(d.dsep(1, 2, {5}))
 
     def test_is_invariant(self):
-        d = cd.DAG(arcs={(1, 2), (2, 3)})
+        d = DAG(arcs={(1, 2), (2, 3)})
         self.assertTrue(d.is_invariant(1, 3))
         self.assertTrue(d.is_invariant(2, 3))
         self.assertFalse(d.is_invariant(3, 3))
@@ -158,14 +158,14 @@ class TestDAG(TestCase):
         self.assertTrue(d.is_invariant(1, 3, cond_set=2))
 
     def test_marginal_mag(self):
-        d = cd.DAG(arcs={(1, 2), (1, 3)})
-        self.assertEqual(d.marginal_mag(1), cd.AncestralGraph(bidirected={(2, 3)}))
+        d = DAG(arcs={(1, 2), (1, 3)})
+        self.assertEqual(d.marginal_mag(1), AncestralGraph(bidirected={(2, 3)}))
 
-        d = cd.DAG(arcs={(1, 2), (1, 3), (2, 3)})
-        self.assertEqual(d.marginal_mag(1), cd.AncestralGraph(directed={(2, 3)}))
+        d = DAG(arcs={(1, 2), (1, 3), (2, 3)})
+        self.assertEqual(d.marginal_mag(1), AncestralGraph(directed={(2, 3)}))
 
     def test_markov_blanket(self):
-        d = cd.DAG(arcs={(1, 2), (2, 3), (2, 4), (3, 5), (6, 3), (7, 4), (8, 4)})
+        d = DAG(arcs={(1, 2), (2, 3), (2, 4), (3, 5), (6, 3), (7, 4), (8, 4)})
         self.assertEqual(d.markov_blanket_of(2), {1, 3, 4, 6, 7, 8})
 
     # def test_vstructs(self):
