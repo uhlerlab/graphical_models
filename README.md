@@ -17,7 +17,7 @@ $ pip3 install graphical_models
 ```
 
 ### Documentation
-Documentation is available at https://graphical_models.readthedocs.io/en/latest/
+Documentation is available at https://graphical-models.readthedocs.io/en/latest/
 
 
 ### Simple Example
