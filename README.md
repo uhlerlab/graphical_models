@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.com/uhlerlab/graphical_models.svg?branch=main)](https://travis-ci.com/uhlerlab/graphical_models)
-[![codecov](https://codecov.io/gh/uhlerlab/causaldag/branch/master/graph/badge.svg?token=RSM00FKU9A)](https://codecov.io/gh/uhlerlab/causaldag)
+[![codecov](https://codecov.io/gh/uhlerlab/graphical_models/branch/main/graph/badge.svg?token=LF0YVTL3GO)](https://codecov.io/gh/uhlerlab/graphical_models)
 
 `graphical_models` is a Python package for:
 * **representing** graphical models, including directed acyclic graphs (DAGs), undirected graphs,
