@@ -38,8 +38,8 @@
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="GaussDAG" href="GaussDAG.html" />
-    <link rel="prev" title="DAG" href="DAG.html" /> 
+    <link rel="next" title="graphical_models.pdag.PDAG.copy" href="generated/graphical_models.pdag.PDAG.copy.html" />
+    <link rel="prev" title="graphical_models.classes.dags.dag.DAG.greedy_optimal_fully_orienting_interventions" href="generated/graphical_models.classes.dags.dag.DAG.greedy_optimal_fully_orienting_interventions.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -91,6 +91,9 @@
 <li class="toctree-l2 current"><a class="current reference internal" href="#">PDAG</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#overview">Overview</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#methods">Methods</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="generated/graphical_models.pdag.PDAG.copy.html">graphical_models.pdag.PDAG.copy</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/graphical_models.pdag.PDAG.to_amat.html">graphical_models.pdag.PDAG.to_amat</a></li>
+<li class="toctree-l4"><a class="reference internal" href="generated/graphical_models.pdag.PDAG.from_amat.html">graphical_models.pdag.PDAG.from_amat</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#graph-modification">Graph modification</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#graph-properties">Graph properties</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#comparison-to-other-pdags">Comparison to other PDAGs</a></li>
@@ -176,6 +179,11 @@
 <span id="id1"></span><h1>PDAG<a class="headerlink" href="#pdag" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="overview">
 <h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="graphical_models.pdag.PDAG">
+<em class="property">class </em><code class="sig-prename descclassname">graphical_models.pdag.</code><code class="sig-name descname">PDAG</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">nodes</span><span class="p">:</span> <span class="n">Set</span> <span class="o">=</span> <span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">arcs</span><span class="p">:</span> <span class="n">Set</span> <span class="o">=</span> <span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">edges</span><span class="p">:</span> <span class="n">Set</span> <span class="o">=</span> <span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">known_arcs</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">new</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#graphical_models.pdag.PDAG" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 </div>
 <div class="section" id="methods">
 <h2>Methods<a class="headerlink" href="#methods" title="Permalink to this headline">¶</a></h2>
@@ -185,6 +193,15 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">PDAG.copy</span></code>()</p></td>
+<td><p>Return a copy of the graph</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">PDAG.to_amat</span></code>([node_list, source_axis])</p></td>
+<td><p>Return an adjacency matrix for the graph</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">PDAG.from_amat</span></code>(amat[, source_axis])</p></td>
+<td><p>Return a PDAG with arcs/edges given by amat</p></td>
+</tr>
 </tbody>
 </table>
 <div class="section" id="graph-modification">
@@ -195,6 +212,12 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">PDAG.remove_node</span></code>(node)</p></td>
+<td><p>Remove a node from the graph</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">PDAG.add_known_arc</span></code>(i, j)</p></td>
+<td><p></p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -206,6 +229,12 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">PDAG.has_edge</span></code>(i, j)</p></td>
+<td><p>Return True if the graph contains the edge i–j</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">PDAG.has_edge_or_arc</span></code>(i, j)</p></td>
+<td><p>Return True if the graph contains the edge i–j or an arc i-&gt;j or i&lt;-j</p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -217,6 +246,9 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">PDAG.shd</span></code>(other)</p></td>
+<td><p>Return the structural Hamming distance between this PDAG and another.</p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -228,6 +260,12 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">PDAG.to_dag</span></code>()</p></td>
+<td><p>Return a DAG that is consistent with this CPDAG.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">PDAG.all_dags</span></code>([verbose])</p></td>
+<td><p>Return all DAGs consistent with this PDAG</p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -240,8 +278,8 @@
           </div>
           <footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-        <a href="GaussDAG.html" class="btn btn-neutral float-right" title="GaussDAG" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-        <a href="DAG.html" class="btn btn-neutral float-left" title="DAG" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="generated/graphical_models.pdag.PDAG.copy.html" class="btn btn-neutral float-right" title="graphical_models.pdag.PDAG.copy" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="generated/graphical_models.classes.dags.dag.DAG.greedy_optimal_fully_orienting_interventions.html" class="btn btn-neutral float-left" title="graphical_models.classes.dags.dag.DAG.greedy_optimal_fully_orienting_interventions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>
