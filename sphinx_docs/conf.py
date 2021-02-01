@@ -49,10 +49,10 @@ extensions = [
 
 autosummary_generate = True
 autodoc_mock_imports = [
-    # 'numpy',
-    # 'networkx',
-    # 'scipy',
-    # 'tqdm'
+    'numpy',
+    'networkx',
+    'scipy',
+    'tqdm'
 ]
 latex_paper_size = 'letter'
 
