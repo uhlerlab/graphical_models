@@ -1,0 +1,6 @@
+﻿graphical\_models.dags.pdag.PDAG.from\_amat
+===========================================
+
+.. currentmodule:: graphical_models
+
+.. automethod:: dags.pdag.PDAG.from_amat

@@ -1,0 +1,6 @@
+﻿graphical\_models.dags.pdag.PDAG.has\_edge\_or\_arc
+===================================================
+
+.. currentmodule:: graphical_models
+
+.. automethod:: dags.pdag.PDAG.has_edge_or_arc

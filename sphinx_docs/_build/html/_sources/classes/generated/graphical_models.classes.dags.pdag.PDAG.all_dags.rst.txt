@@ -1,0 +1,6 @@
+﻿graphical\_models.classes.dags.pdag.PDAG.all\_dags
+==================================================
+
+.. currentmodule:: graphical_models.classes.dags.pdag
+
+.. automethod:: PDAG.all_dags

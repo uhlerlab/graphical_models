@@ -1,0 +1,6 @@
+﻿graphical\_models.dags.pdag.PDAG.add\_known\_arc
+================================================
+
+.. currentmodule:: graphical_models
+
+.. automethod:: dags.pdag.PDAG.add_known_arc

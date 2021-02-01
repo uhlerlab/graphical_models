@@ -1,0 +1,6 @@
+﻿graphical\_models.classes.dags.pdag.PDAG.shd
+============================================
+
+.. currentmodule:: graphical_models.classes.dags.pdag
+
+.. automethod:: PDAG.shd

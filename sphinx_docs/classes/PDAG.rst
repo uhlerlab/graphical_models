@@ -6,7 +6,7 @@ PDAG
 
 Overview
 ********
-.. currentmodule:: graphical_models.pdag
+.. currentmodule:: graphical_models
 .. autoclass:: PDAG
 
 Methods
