@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.com/uhlerlab/graphical_models.svg?branch=main)](https://travis-ci.com/uhlerlab/graphical_models)
 [![codecov](https://codecov.io/gh/uhlerlab/causaldag/branch/master/graph/badge.svg?token=RSM00FKU9A)](https://codecov.io/gh/uhlerlab/causaldag)
 
 `graphical_models` is a Python package for:
