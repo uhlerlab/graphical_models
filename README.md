@@ -1,3 +1,4 @@
+[![PyPI version](https://badge.fury.io/py/graphical_models.svg)](https://badge.fury.io/py/graphical_models)
 [![Build Status](https://travis-ci.com/uhlerlab/graphical_models.svg?branch=main)](https://travis-ci.com/uhlerlab/graphical_models)
 [![codecov](https://codecov.io/gh/uhlerlab/graphical_models/branch/main/graph/badge.svg?token=LF0YVTL3GO)](https://codecov.io/gh/uhlerlab/graphical_models)
 
