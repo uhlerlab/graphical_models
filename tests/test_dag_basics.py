@@ -9,11 +9,11 @@ class TestDAG(TestCase):
         self.d = DAG(arcs={(1, 2), (1, 3), (3, 4), (2, 4), (3, 5)})
 
     def test_neighbors(self):
-        self.assertEqual(self.d._neighbors[1], {2, 3})
-        self.assertEqual(self.d._neighbors[2], {1, 4})
-        self.assertEqual(self.d._neighbors[3], {1, 4, 5})
-        self.assertEqual(self.d._neighbors[4], {2, 3})
-        self.assertEqual(self.d._neighbors[5], {3})
+        self.assertEqual(self.d.neighbors_of(1), {2, 3})
+        self.assertEqual(self.d.neighbors_of(2), {1, 4})
+        self.assertEqual(self.d.neighbors_of(3), {1, 4, 5})
+        self.assertEqual(self.d.neighbors_of(4), {2, 3})
+        self.assertEqual(self.d.neighbors_of(5), {3})
 
     def test_children(self):
         self.assertEqual(self.d.children_of(1), {2, 3})
@@ -29,19 +29,32 @@ class TestDAG(TestCase):
         self.assertEqual(self.d.parents_of(4), {2, 3})
         self.assertEqual(self.d.parents_of(5), {3})
 
-    def test_downstream(self):
+    def test_descendants_of(self):
         self.assertEqual(self.d.descendants_of(1), {2, 3, 4, 5})
         self.assertEqual(self.d.descendants_of(2), {4})
         self.assertEqual(self.d.descendants_of(3), {4, 5})
         self.assertEqual(self.d.descendants_of(4), set())
         self.assertEqual(self.d.descendants_of(5), set())
 
-    def test_upstream(self):
+        self.assertTrue(self.d.is_ancestor_of(1, 2))
+        self.assertTrue(self.d.is_ancestor_of(1, 3))
+        self.assertTrue(self.d.is_ancestor_of(1, 4))
+        self.assertTrue(self.d.is_ancestor_of(1, 5))
+
+    def test_descendants_of_multiple(self):
+        d = DAG(arcs={(0, 1), (2, 3)})
+        self.assertEqual(d.descendants_of({0, 2}), {1, 3})
+
+    def test_ancestors_of(self):
         self.assertEqual(self.d.ancestors_of(1), set())
         self.assertEqual(self.d.ancestors_of(2), {1})
         self.assertEqual(self.d.ancestors_of(3), {1})
         self.assertEqual(self.d.ancestors_of(4), {1, 2, 3})
         self.assertEqual(self.d.ancestors_of(5), {1, 3})
+
+    def test_ancestors_of_multiple(self):
+        d = DAG(arcs={(0, 1), (2, 3)})
+        self.assertEqual(d.ancestors_of({1, 3}), {0, 2})
 
     def test_add_node(self):
         self.d.add_node(6)
