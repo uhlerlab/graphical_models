@@ -174,7 +174,7 @@ class DAG:
 
     @property
     def max_out_degree(self) -> int:
-        return max(len(self._parents[node]) for node in self._nodes)
+        return max(len(self._children[node]) for node in self._nodes)
 
     @property
     def sparsity(self) -> float:

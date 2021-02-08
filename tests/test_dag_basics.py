@@ -15,6 +15,8 @@ class TestDAG(TestCase):
         self.assertEqual(self.d.neighbors_of(4), {2, 3})
         self.assertEqual(self.d.neighbors_of(5), {3})
 
+        self.assertEqual(self.d.neighbors_of({1, 2}), {1, 2, 3, 4})
+
     def test_children(self):
         self.assertEqual(self.d.children_of(1), {2, 3})
         self.assertEqual(self.d.children_of(2), {4})
@@ -22,12 +24,16 @@ class TestDAG(TestCase):
         self.assertEqual(self.d.children_of(4), set())
         self.assertEqual(self.d.children_of(5), set())
 
+        self.assertEqual(self.d.children_of({1, 2}), {2, 3, 4})
+
     def test_parents(self):
         self.assertEqual(self.d.parents_of(1), set())
         self.assertEqual(self.d.parents_of(2), {1})
         self.assertEqual(self.d.parents_of(3), {1})
         self.assertEqual(self.d.parents_of(4), {2, 3})
         self.assertEqual(self.d.parents_of(5), {3})
+
+        self.assertEqual(self.d.parents_of({3, 4}), {1, 2, 3})
 
     def test_descendants_of(self):
         self.assertEqual(self.d.descendants_of(1), {2, 3, 4, 5})
@@ -105,6 +111,31 @@ class TestDAG(TestCase):
         self.assertEqual(self.d.incident_arcs(3), {(1, 3), (3, 4), (3, 5)})
         self.assertEqual(self.d.incident_arcs(4), {(2, 4), (3, 4)})
         self.assertEqual(self.d.incident_arcs(5), {(3, 5)})
+
+    def test_properties(self):
+        d = DAG(arcs={(0, 1), (1, 2)})
+        self.assertEqual(d.nnodes, 3)
+        self.assertEqual(d.num_arcs, 2)
+        self.assertEqual(d.skeleton, {frozenset({0, 1}), frozenset({1, 2})})
+        self.assertEqual(d.sparsity, 2/3)
+
+    def test_degrees(self):
+        d = DAG(arcs={(0, 1), (0, 2), (1, 3), (2, 3), (0, 4)})
+        indegrees = {0: 0, 1: 1, 2: 1, 3: 2, 4: 1}
+        outdegrees = {0: 3, 1: 1, 2: 1, 3: 0, 4: 0}
+        self.assertEqual(d.in_degrees, indegrees)
+        self.assertEqual(d.out_degrees, outdegrees)
+        self.assertEqual(d.max_in_degree, 2)
+        self.assertEqual(d.max_out_degree, 3)
+
+        for k, v in indegrees.items():
+            self.assertEqual(d.indegree_of(k), v)
+        for k, v in outdegrees.items():
+            self.assertEqual(d.outdegree_of(k), v)
+
+    def test_outgoing_incoming(self):
+        self.assertEqual(self.d.incoming_arcs(4), {(2, 4), (3, 4)})
+        self.assertEqual(self.d.outgoing_arcs(1), {(1, 2), (1, 3)})
 
     # def test_vstructs(self):
     #     pass
