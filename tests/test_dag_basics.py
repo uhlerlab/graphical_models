@@ -16,18 +16,18 @@ class TestDAG(TestCase):
         self.assertEqual(self.d._neighbors[5], {3})
 
     def test_children(self):
-        self.assertEqual(self.d._children[1], {2, 3})
-        self.assertEqual(self.d._children[2], {4})
-        self.assertEqual(self.d._children[3], {4, 5})
-        self.assertEqual(self.d._children[4], set())
-        self.assertEqual(self.d._children[5], set())
+        self.assertEqual(self.d.children_of(1), {2, 3})
+        self.assertEqual(self.d.children_of(2), {4})
+        self.assertEqual(self.d.children_of(3), {4, 5})
+        self.assertEqual(self.d.children_of(4), set())
+        self.assertEqual(self.d.children_of(5), set())
 
     def test_parents(self):
-        self.assertEqual(self.d._parents[1], set())
-        self.assertEqual(self.d._parents[2], {1})
-        self.assertEqual(self.d._parents[3], {1})
-        self.assertEqual(self.d._parents[4], {2, 3})
-        self.assertEqual(self.d._parents[5], {3})
+        self.assertEqual(self.d.parents_of(1), set())
+        self.assertEqual(self.d.parents_of(2), {1})
+        self.assertEqual(self.d.parents_of(3), {1})
+        self.assertEqual(self.d.parents_of(4), {2, 3})
+        self.assertEqual(self.d.parents_of(5), {3})
 
     def test_downstream(self):
         self.assertEqual(self.d.descendants_of(1), {2, 3, 4, 5})

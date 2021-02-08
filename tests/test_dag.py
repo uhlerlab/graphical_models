@@ -168,6 +168,25 @@ class TestDAG(TestCase):
         d = DAG(arcs={(1, 2), (2, 3), (2, 4), (3, 5), (6, 3), (7, 4), (8, 4)})
         self.assertEqual(d.markov_blanket_of(2), {1, 3, 4, 6, 7, 8})
 
+    def test_init_dag(self):
+        d = DAG(arcs={(0, 1)})
+        d2 = DAG(dag=d)
+        self.assertEqual(d2.arcs, {(0, 1)})
+
+    def test_str(self):
+        d = DAG(arcs={(0, 1)})
+        self.assertEqual(str(d), "[0][1|0]")
+
+    def test_copy(self):
+        d = DAG(arcs={(0, 1)})
+        d2 = d.copy()
+        self.assertEqual(d2.arcs, {(0, 1)})
+
+    def test_induced_subgraph(self):
+        d = DAG(arcs={(0, 1), (1, 2)})
+        d2 = d.induced_subgraph({0, 1})
+        self.assertEqual(d2.arcs, {(0, 1)})
+
     # def test_vstructs(self):
     #     pass
     #
