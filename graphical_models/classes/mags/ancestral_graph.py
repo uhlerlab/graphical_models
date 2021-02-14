@@ -144,7 +144,248 @@ class AncestralGraph:
     def __repr__(self):
         return str(self)
 
-    # === MUTATORS
+    # === NODE PROPERTIES
+    def children_of(self, i: NodeSet) -> Set[Node]:
+        """
+        Return the children of the node or set of nodes ``i``.
+
+        Parameters
+        ----------
+        i
+            Node.
+
+        Examples
+        --------
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(directed={(1, 2), (2, 3)}, undirected={(1, 4)})
+        >>> g.children_of(1)
+        {2}
+        >>> g.children_of({1, 2})
+        {2, 3}
+        """
+        if isinstance(i, set):
+            return set.union(*(self._children[n] for n in i))
+        else:
+            return self._children[i].copy()
+
+    def parents_of(self, nodes: NodeSet) -> Set[Node]:
+        """
+        Return the parents of the node or set of nodes ``nodes``.
+
+        Parameters
+        ----------
+        nodes
+            Nodes.
+
+        Examples
+        --------
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(directed={(1, 2), (2, 3)}, undirected={(1, 4)})
+        >>> g.parents_of(2)
+        {1}
+        >>> g.parents_of({2, 3})
+        {1, 2}
+        """
+        if isinstance(nodes, set):
+            return set.union(*(self._parents[n] for n in nodes))
+        else:
+            return self._parents[nodes].copy()
+
+    def spouses_of(self, nodes: NodeSet) -> Set[Node]:
+        """
+        Return the spouses of the node or set of nodes ``nodes``.
+
+        Parameters
+        ----------
+        nodes
+            Nodes.
+
+        Examples
+        --------
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(directed={(1, 2), (2, 3)}, bidirected={(1, 4), (2, 5)})
+        >>> g.spouses_of(1)
+        {4}
+        >>> g.spouses_of({1, 2})
+        {4, 5}
+        """
+        if isinstance(nodes, set):
+            return set.union(*(self._spouses[n] for n in nodes))
+        else:
+            return self._spouses[nodes].copy()
+
+    def neighbors_of(self, nodes: NodeSet) -> Set[Node]:
+        """
+        Return the neighbors of the node or set of nodes ``nodes``.
+
+        Parameters
+        ----------
+        nodes
+            Nodes.
+
+        Examples
+        --------
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(directed={(1, 3), (2, 3)}, undirected={(1, 4), (2, 5)})
+        >>> g.neighbors_of(1)
+        {4}
+        >>> g.neighbors_of({1, 2})
+        {4, 5}
+        """
+        if isinstance(nodes, set):
+            return set.union(*(self._neighbors[n] for n in nodes))
+        else:
+            return self._neighbors[nodes].copy()
+
+    def _add_ancestors(self, ancestors, node, exclude_arcs=set()):
+        for parent in self._parents[node]:
+            if parent not in ancestors and (parent, node) not in exclude_arcs:
+                ancestors.add(parent)
+                self._add_ancestors(ancestors, parent, exclude_arcs=exclude_arcs)
+
+    def _add_descendants(self, descendants, node, exclude_arcs=set()):
+        for child in self._children[node]:
+            if child not in descendants and (child, node) not in exclude_arcs:
+                descendants.add(child)
+                self._add_descendants(descendants, child, exclude_arcs=exclude_arcs)
+
+    def ancestors_of(self, nodes: NodeSet, exclude_arcs=set()) -> Set[Node]:
+        """
+        Return the ancestors of the node or set of nodes ``nodes``.
+
+        Parameters
+        ----------
+        nodes:
+            Set of nodes.
+        exclude_arcs:
+            TODO
+
+        See Also
+        --------
+        descendants_of
+
+        Return
+        ------
+        Set[node]
+            Return all nodes j such that there is a directed path from j to node.
+
+        Example
+        -------
+        TODO
+        """
+        ancestors = set()
+        if not isinstance(nodes, set):
+            self._add_ancestors(ancestors, nodes, exclude_arcs=exclude_arcs)
+        else:
+            return set.union(*(self.ancestors_of(node) for node in nodes))
+        return ancestors
+
+    def ancestor_dict(self) -> dict:
+        """
+        Return a dictionary from each node to its ancestors.
+
+        See Also
+        --------
+        ancestors_of
+
+        Return
+        ------
+        Dict[node,Set]
+            Mapping node to ancestors
+
+        Example
+        -------
+        TODO
+        """
+        top_sort = self.topological_sort()
+
+        node2ancestors_plus_self = defaultdict(set)
+        for node in top_sort:
+            node2ancestors_plus_self[node].add(node)
+            for child in self._children[node]:
+                node2ancestors_plus_self[child].update(node2ancestors_plus_self[node])
+
+        for node in self._nodes:
+            node2ancestors_plus_self[node] -= {node}
+
+        return core_utils.defdict2dict(node2ancestors_plus_self, self._nodes)
+
+    def descendant_dict(self) -> dict:
+        """
+        Return a dictionary from each node to its descendants.
+
+        See Also
+        --------
+        ancestors_of
+
+        Return
+        ------
+        Dict[node,Set]
+            Mapping node to ancestors
+
+        Example
+        -------
+        TODO
+        """
+        top_sort = self.topological_sort()
+
+        node2descendants_plus_self = defaultdict(set)
+        for node in reversed(top_sort):
+            node2descendants_plus_self[node].add(node)
+            for parent in self._parents[node]:
+                node2descendants_plus_self[parent].update(node2descendants_plus_self[node])
+
+        for node in self._nodes:
+            node2descendants_plus_self[node] -= {node}
+
+        return core_utils.defdict2dict(node2descendants_plus_self, self._nodes)
+
+    def descendants_of(self, nodes: NodeSet, exclude_arcs=set()) -> Set[Node]:
+        """
+        Return the descendants of the node or set of nodes ``nodes``.
+
+        Parameters
+        ----------
+        nodes:
+            The nodes.
+
+        See Also
+        --------
+        ancestors_of
+
+        Return
+        ------
+        Set[node]
+            Return all nodes j such that there is a directed path from node j.
+
+        Example
+        -------
+        TODO
+        """
+        descendants = set()
+        if not isinstance(nodes, set):
+            self._add_descendants(descendants, nodes, exclude_arcs=exclude_arcs)
+        else:
+            return set.union(*(self.descendants_of(node) for node in nodes))
+        return descendants
+
+    def district_of(self, node: Node, node_subset=None) -> Set[Node]:
+        """
+        Return the district of a node, i.e., the set of nodes reachable by bidirected edges. If ``node_subset`` is
+        provided, do this on the induced subgraph on that subset of nodes.
+
+        Return
+        ------
+        Set[node]
+            The district of node.
+
+        Examples
+        --------
+        TODO
+        """
+        return self._bidirected_reachable(node, set(), set(), node_subset=node_subset)
+
+    # === GRAPH MODIFICATION
     def add_node(self, node: Node):
         """
         Add a node to the ancestral graph.
@@ -212,26 +453,6 @@ class AncestralGraph:
         curr_path.pop()
         curr_path_visited[node] = False
         stack.append(node)
-
-    def topological_sort(self) -> list:
-        """
-        Return a linear order that is consistent with the partial order implied by ancestral relations of this graph.
-
-        Examples
-        --------
-        >>> from graphical_models import AncestralGraph
-        >>> g = AncestralGraph(bidirected={(1, 2), (1, 4)}, directed={(1, 3), (2, 3)})
-        >>> g.topological_sort()
-        [4, 2, 1, 3]
-        """
-        any_visited = {node: False for node in self._nodes}
-        curr_path_visited = {node: False for node in self._nodes}
-        curr_path = []
-        stack = []
-        for node in self._nodes:
-            if not any_visited[node]:
-                self._mark_children_visited(node, any_visited, curr_path_visited, curr_path, stack)
-        return list(reversed(stack))
 
     def add_directed(self, i: Node, j: Node):
         """
@@ -644,230 +865,6 @@ class AncestralGraph:
     def skeleton(self) -> Set[UndirectedEdge]:
         return {frozenset({i, j}) for i, j in self._bidirected | self._undirected | self._directed}
 
-    def children_of(self, i: NodeSet) -> Set[Node]:
-        """
-        Return the children of the node or set of nodes ``i``.
-
-        Parameters
-        ----------
-        i
-            Node.
-
-        Examples
-        --------
-        >>> from graphical_models import AncestralGraph
-        >>> g = AncestralGraph(directed={(1, 2), (2, 3)}, undirected={(1, 4)})
-        >>> g.children_of(1)
-        {2}
-        >>> g.children_of({1, 2})
-        {2, 3}
-        """
-        if isinstance(i, set):
-            return set.union(*(self._children[n] for n in i))
-        else:
-            return self._children[i].copy()
-
-    def parents_of(self, nodes: NodeSet) -> Set[Node]:
-        """
-        Return the parents of the node or set of nodes ``nodes``.
-
-        Parameters
-        ----------
-        nodes
-            Nodes.
-
-        Examples
-        --------
-        >>> from graphical_models import AncestralGraph
-        >>> g = AncestralGraph(directed={(1, 2), (2, 3)}, undirected={(1, 4)})
-        >>> g.parents_of(2)
-        {1}
-        >>> g.parents_of({2, 3})
-        {1, 2}
-        """
-        if isinstance(nodes, set):
-            return set.union(*(self._parents[n] for n in nodes))
-        else:
-            return self._parents[nodes].copy()
-
-    def spouses_of(self, nodes: NodeSet) -> Set[Node]:
-        """
-        Return the spouses of the node or set of nodes ``nodes``.
-
-        Parameters
-        ----------
-        nodes
-            Nodes.
-
-        Examples
-        --------
-        >>> from graphical_models import AncestralGraph
-        >>> g = AncestralGraph(directed={(1, 2), (2, 3)}, bidirected={(1, 4), (2, 5)})
-        >>> g.spouses_of(1)
-        {4}
-        >>> g.spouses_of({1, 2})
-        {4, 5}
-        """
-        if isinstance(nodes, set):
-            return set.union(*(self._spouses[n] for n in nodes))
-        else:
-            return self._spouses[nodes].copy()
-
-    def neighbors_of(self, nodes: NodeSet) -> Set[Node]:
-        """
-        Return the neighbors of the node or set of nodes ``nodes``.
-
-        Parameters
-        ----------
-        nodes
-            Nodes.
-
-        Examples
-        --------
-        >>> from graphical_models import AncestralGraph
-        >>> g = AncestralGraph(directed={(1, 3), (2, 3)}, undirected={(1, 4), (2, 5)})
-        >>> g.neighbors_of(1)
-        {4}
-        >>> g.neighbors_of({1, 2})
-        {4, 5}
-        """
-        if isinstance(nodes, set):
-            return set.union(*(self._neighbors[n] for n in nodes))
-        else:
-            return self._neighbors[nodes].copy()
-
-    def _add_ancestors(self, ancestors, node, exclude_arcs=set()):
-        for parent in self._parents[node]:
-            if parent not in ancestors and (parent, node) not in exclude_arcs:
-                ancestors.add(parent)
-                self._add_ancestors(ancestors, parent, exclude_arcs=exclude_arcs)
-
-    def _add_descendants(self, descendants, node, exclude_arcs=set()):
-        for child in self._children[node]:
-            if child not in descendants and (child, node) not in exclude_arcs:
-                descendants.add(child)
-                self._add_descendants(descendants, child, exclude_arcs=exclude_arcs)
-
-    def ancestors_of(self, nodes: NodeSet, exclude_arcs=set()) -> Set[Node]:
-        """
-        Return the ancestors of the node or set of nodes ``nodes``.
-
-        Parameters
-        ----------
-        nodes:
-            Set of nodes.
-        exclude_arcs:
-            TODO
-
-        See Also
-        --------
-        descendants_of
-
-        Return
-        ------
-        Set[node]
-            Return all nodes j such that there is a directed path from j to node.
-
-        Example
-        -------
-        TODO
-        """
-        ancestors = set()
-        if not isinstance(nodes, set):
-            self._add_ancestors(ancestors, nodes, exclude_arcs=exclude_arcs)
-        else:
-            return set.union(*(self.ancestors_of(node) for node in nodes))
-        return ancestors
-
-    def ancestor_dict(self) -> dict:
-        """
-        Return a dictionary from each node to its ancestors.
-
-        See Also
-        --------
-        ancestors_of
-
-        Return
-        ------
-        Dict[node,Set]
-            Mapping node to ancestors
-
-        Example
-        -------
-        TODO
-        """
-        top_sort = self.topological_sort()
-
-        node2ancestors_plus_self = defaultdict(set)
-        for node in top_sort:
-            node2ancestors_plus_self[node].add(node)
-            for child in self._children[node]:
-                node2ancestors_plus_self[child].update(node2ancestors_plus_self[node])
-
-        for node in self._nodes:
-            node2ancestors_plus_self[node] -= {node}
-
-        return core_utils.defdict2dict(node2ancestors_plus_self, self._nodes)
-
-    def descendant_dict(self) -> dict:
-        """
-        Return a dictionary from each node to its descendants.
-
-        See Also
-        --------
-        ancestors_of
-
-        Return
-        ------
-        Dict[node,Set]
-            Mapping node to ancestors
-
-        Example
-        -------
-        TODO
-        """
-        top_sort = self.topological_sort()
-
-        node2descendants_plus_self = defaultdict(set)
-        for node in reversed(top_sort):
-            node2descendants_plus_self[node].add(node)
-            for parent in self._parents[node]:
-                node2descendants_plus_self[parent].update(node2descendants_plus_self[node])
-
-        for node in self._nodes:
-            node2descendants_plus_self[node] -= {node}
-
-        return core_utils.defdict2dict(node2descendants_plus_self, self._nodes)
-
-    def descendants_of(self, nodes: NodeSet, exclude_arcs=set()) -> Set[Node]:
-        """
-        Return the descendants of the node or set of nodes ``nodes``.
-
-        Parameters
-        ----------
-        nodes:
-            The nodes.
-
-        See Also
-        --------
-        ancestors_of
-
-        Return
-        ------
-        Set[node]
-            Return all nodes j such that there is a directed path from node j.
-
-        Example
-        -------
-        TODO
-        """
-        descendants = set()
-        if not isinstance(nodes, set):
-            self._add_descendants(descendants, nodes, exclude_arcs=exclude_arcs)
-        else:
-            return set.union(*(self.descendants_of(node) for node in nodes))
-        return descendants
-
     def has_directed(self, i: Node, j: Node) -> bool:
         """
         Check if this graph has the directed edge ``i``->``j``.
@@ -1018,22 +1015,6 @@ class AncestralGraph:
                 components.append(self._bidirected_reachable(node, set(), visited_nodes))
 
         return components
-
-    def district_of(self, node: Node, node_subset=None) -> Set[Node]:
-        """
-        Return the district of a node, i.e., the set of nodes reachable by bidirected edges. If ``node_subset`` is
-        provided, do this on the induced subgraph on that subset of nodes.
-
-        Return
-        ------
-        Set[node]
-            The district of node.
-
-        Examples
-        --------
-        TODO
-        """
-        return self._bidirected_reachable(node, set(), set(), node_subset=node_subset)
 
     def discriminating_paths(self, verbose=False) -> Dict[Tuple, str]:
         """
@@ -1333,7 +1314,7 @@ class AncestralGraph:
         else:
             return True
 
-    def markov_blanket(self, node, flat: bool = False) -> Union[Set[Node], Dict]:
+    def markov_blanket_of(self, node, flat: bool = False) -> Union[Set[Node], Dict]:
         """
         Return the Markov blanket of a node with respect to the whole graph.
 
@@ -1386,303 +1367,7 @@ class AncestralGraph:
         new_mag.to_maximal(new=new, verbose=verbose)
         return new_mag == self
 
-    def to_maximal(self, new=True, verbose=False):
-        """
-        TODO
-
-        Parameters
-        ----------
-        TODO
-
-        Examples
-        --------
-        TODO
-        """
-        if new:
-            converged = False
-            while not converged:
-                # === NEED DICTIONARY OF ANCESTORS AND C-COMPONENTS TO CHECK INDUCING PATHS
-                ancestor_dict = self.ancestor_dict()
-                c_components = self.c_components()
-                node2component = dict()
-                for ix, component in enumerate(c_components):
-                    for node in component:
-                        node2component[node] = ix
-                if verbose: print('==========')
-                if verbose: print('Ancestor dict:', ancestor_dict)
-                if verbose: print('C components', c_components)
-
-                # === FIND INDUCING PATHS BETWEEN PAIRS OF NODE
-                induced_pairs = []
-
-                non_adjacent_pairs = ((i, j) for i, j in itr.combinations(self._nodes, 2) if
-                                      not self.has_any_edge(i, j))
-                for node1, node2 in non_adjacent_pairs:
-                    check_ancestry = lambda node: node in ancestor_dict[node1] or node in ancestor_dict[node2]
-                    nbrs1 = self._children[node1] | self._spouses[node1]
-                    nbrs2 = self._children[node2] | self._spouses[node2]
-                    if verbose: print(f"-------------\nChecking {node1} and {node2}")
-
-                    # ONLY CHECK PATHS BETWEEN SPOUSES/CHILDREN THAT ARE IN THE SAME C-COMPONENT
-                    for nbr1, nbr2 in itr.product(nbrs1, nbrs2):
-                        same_component = node2component[nbr1] == node2component[nbr2]
-                        if same_component and nbr1 in ancestor_dict[node2] and nbr2 in ancestor_dict[node1]:
-                            if verbose: print(f"Checking neighbors {nbr1} (for {node1}) and {nbr2} (for {node2})")
-                            if self._reachable(nbr1, nbr2, visited=set(), allowed_edges={'b'}, predicate=check_ancestry,
-                                               verbose=verbose):
-                                if verbose: print("Reachable")
-                                induced_pairs.append((node1, node2))
-                                continue
-                            elif verbose:
-                                print("No path")
-                if verbose: print(f"found induced pairs: {induced_pairs}")
-                for node1, node2 in induced_pairs:
-                    self.add_bidirected(node1, node2)
-
-                converged = len(induced_pairs) == 0
-                # print('converged:', converged)
-        else:
-            for i, j in itr.combinations(self._nodes, r=2):
-                if not self.has_any_edge(i, j):
-                    never_msep = not any(self.msep(i, j, S) for S in core_utils.powerset(self._nodes - {i, j}))
-                    if never_msep: self.add_bidirected(i, j)
-
-    def to_pag(self):
-        raise NotImplementedError
-
-    # === CONVERTERS
-    def to_amat(self) -> np.ndarray:
-        """
-        Convert the graph into an adjacency matrix.
-        TODO: meaning of numbers
-
-        Returns
-        -------
-        amat
-            The adjacency matrix of this graph.
-
-        Examples
-        --------
-        TODO
-        """
-        amat = np.zeros([self.nnodes, self.nnodes])
-        for i, j in self.directed:
-            amat[i, j] = 2
-            amat[j, i] = 3
-        for i, j in self.bidirected:
-            amat[i, j] = 2
-            amat[j, i] = 2
-        for i, j in self.undirected:
-            amat[i, j] = 3
-            amat[j, i] = 3
-        return amat
-
-    @staticmethod
-    def from_amat(amat: np.ndarray):
-        """
-        Create a graph from an adjacency matrix.
-        TODO: meaning of numbers
-
-        Parameters
-        ----------
-        amat
-            The adjacency matrix
-
-        Examples
-        --------
-        TODO
-        """
-        p = amat.shape[0]
-        directed = set()
-        bidirected = set()
-        undirected = set()
-        for i, j in itr.combinations(set(range(p)), 2):
-            vij = amat[i, j]
-            vji = amat[j, i]
-            if vij == 2 and vji == 3:  # arrowhead at j
-                directed.add((i, j))
-            elif vij == 3 and vji == 2:  # arrowhead at i
-                directed.add((j, i))
-            elif vij == 2 and vji == 2:  # arrowheads at both
-                bidirected.add((i, j))
-            elif vij == 3 and vji == 3:  # no arrowhead
-                undirected.add((i, j))
-        return AncestralGraph(set(range(p)), directed, bidirected, undirected)
-
-    # === COMPARISON
-    def markov_equivalent(self, other) -> bool:
-        """
-        Check if this graph is Markov equivalent to the graph ``other``. Two graphs are Markov equivalent iff.
-        they have the same skeleton, same v-structures, and if whenever there is the same discriminating path for some
-        node in both graphs, the node is a collider on that path in one graph iff. it is a collider on that path in
-        the other graph.
-
-        Parameters
-        ----------
-        other:
-            another AncestralGraph.
-
-        Examples
-        --------
-        TODO
-        """
-        same_skeleton = self.skeleton == other.skeleton
-        same_vstructures = self.vstructures() == other.vstructures()
-
-        self_discriminating_paths = self.discriminating_paths()
-        other_discriminating_paths = other.discriminating_paths()
-        shared_disc_paths = set(self_discriminating_paths.keys()) & set(other_discriminating_paths)
-        same_discriminating = all(
-            self_discriminating_paths[path] == other_discriminating_paths[path]
-            for path in shared_disc_paths
-        )
-
-        return same_skeleton and same_vstructures and same_discriminating
-
-    def fast_markov_equivalent(self, other) -> bool:
-        """
-        Use Algorithm 1 of "Faster algorithms for Markov equivalence" (Hu and Evans, 2020) to check for Markov
-        equivalence between two graphs.
-        """
-        if self.skeleton != other.skeleton:
-            return False
-        if self.vstructures() != other.vstructures():
-            return False
-        if self.discriminating_triples() != other.discriminating_triples():
-            return False
-        return True
-
-    def _tail_of(self, v: Node, w: Node, ancestor_dict: dict):
-        ancestors = ancestor_dict[v] | ancestor_dict[w] | {v, w}
-        d = self.district_of(v, ancestors)
-        p = self.parents_of(d)
-        return p | d - {v, w}
-
-    def discriminating_triples(self, verbose=False):
-        """
-        Return the discriminating triples of the graph, which are triples of nodes that determine the discriminating
-        paths.
-        """
-        d_triples = set()
-        ancestor_dict = self.ancestor_dict()
-        desc_dict = self.descendant_dict()
-
-        for v, w in self._bidirected:
-            tail_vw = self._tail_of(v, w, ancestor_dict)
-
-            # LINES 10-12
-            for z in tail_vw:
-                if not (self.has_any_edge(v, z) and self.has_any_edge(w, z)):
-                    if verbose: print(f"{z} in tail of ({v, w})")
-                    d_triples.add(frozenset({v, w, z}))
-
-            # LINES 13-17
-            a = ancestor_dict[v] | ancestor_dict[w] | {v, w}
-            d = desc_dict[v] | desc_dict[w] | {v, w}
-            for z in self.spouses_of(a) & self.district_of(v) - (a | d):
-                if not (self.has_any_edge(v, z) and self.has_any_edge(w, z)):
-                    dis = self.district_of(v, a | ancestor_dict[z] | {z})
-                    if z in dis:
-                        if verbose: print(f"{z} in district of {v} restricted to spouses, district")
-                        d_triples.add(frozenset({v, w, z}))
-
-        return d_triples | {frozenset(vstruct) for vstruct in self.vstructures()}
-
-    def get_all_mec(self):
-        """
-        TODO
-
-        Examples
-        --------
-        TODO
-        """
-        visited = set()
-        queue = [self]
-        mags = []
-
-        while queue:
-            mag = queue.pop()
-            mags.append(mag)
-            curr_dir, curr_bidir = frozenset(mag._directed), frozenset({frozenset({*e}) for e in mag._bidirected})
-            visited.add((curr_dir, curr_bidir))
-            lmcs_dir, lmcs_bidir = mag.legitimate_mark_changes()
-            for i, j in lmcs_dir:
-                new_dir = curr_dir - {(i, j)}
-                new_bidir = curr_bidir | {frozenset({i, j})}
-                if (new_dir, new_bidir) not in visited:
-                    new_mag = mag.copy()
-                    new_mag.remove_directed(i, j)
-                    new_mag.add_bidirected(i, j)
-                    queue.append(new_mag)
-            for i, j in lmcs_bidir:
-                new_dir = curr_dir | {(i, j)}
-                new_bidir = curr_bidir - {frozenset({i, j})}
-                if (new_dir, new_bidir) not in visited:
-                    new_mag = mag.copy()
-                    new_mag.remove_bidirected(i, j)
-                    new_mag.add_directed(i, j)
-                    queue.append(new_mag)
-
-        return mags
-
-    def shd_skeleton(self, other) -> int:
-        """
-        Compute the structure Hamming distance between the skeleton of this graph and the skeleton of another graph.
-
-        Parameters
-        ----------
-        other:
-            the graph to which the SHD of the skeleton will be computed.
-
-        Return
-        ------
-        int
-            The structural Hamming distance between :math:`G_1` and :math:`G_2` is the minimum number of arc additions,
-            deletions, and reversals required to transform :math:`G_1` into :math:`G_2` (and vice versa).
-
-        Example
-        -------
-        >>> TODO
-        """
-        return len(self.skeleton.symmetric_difference(other.skeleton))
-
-    def as_hashed(self):
-        """
-        TODO
-
-        Examples
-        --------
-        TODO
-        """
-        return frozenset(self._directed), frozenset(self._bidirected), frozenset(self._undirected)
-
-    # === Algorithms
-    def _add_upstream(self, upstream: set, node: Node):
-        for parent in self._parents[node]:
-            if parent not in upstream:
-                upstream.add(parent)
-                self._add_upstream(upstream, parent)
-
-    def _is_collider(self, u: Node, v: Node, w: Node) -> bool:
-        """return True if u-v-w is a collider"""
-        if v in self._children[u] and v in self._children[w]:
-            return True
-        elif v in self._children[u] and v in self._spouses[w]:
-            return True
-        elif v in self._spouses[u] and v in self._children[w]:
-            return True
-        elif v in self._spouses[u] and v in self._spouses[w]:
-            return True
-        else:
-            return False
-
-    def _no_other_path(self, i: Node, j: Node, ancestor_dict: dict) -> bool:
-        """
-        Check if there is any path from ``i`` to ``j`` other than possibly the direct edge i->j.
-        """
-        other_ancestors_j = ancestor_dict[j] - {i}
-        return (other_ancestors_j & self._children[i]) == set()
-
+    # === GRAPH PROPERTIES
     def legitimate_mark_changes(self, verbose=False, strict=True):
         """
         Return directed edges that can be changed to bidirected edges, and bidirected edges that can be changed to
@@ -1795,6 +1480,202 @@ class AncestralGraph:
 
             return mark_changes_dir, mark_changes_bidir
 
+    def discriminating_triples(self, verbose=False):
+        """
+        Return the discriminating triples of the graph, which are triples of nodes that determine the discriminating
+        paths.
+        """
+        d_triples = set()
+        ancestor_dict = self.ancestor_dict()
+        desc_dict = self.descendant_dict()
+
+        for v, w in self._bidirected:
+            tail_vw = self._tail_of(v, w, ancestor_dict)
+
+            # LINES 10-12
+            for z in tail_vw:
+                if not (self.has_any_edge(v, z) and self.has_any_edge(w, z)):
+                    if verbose: print(f"{z} in tail of ({v, w})")
+                    d_triples.add(frozenset({v, w, z}))
+
+            # LINES 13-17
+            a = ancestor_dict[v] | ancestor_dict[w] | {v, w}
+            d = desc_dict[v] | desc_dict[w] | {v, w}
+            for z in self.spouses_of(a) & self.district_of(v) - (a | d):
+                if not (self.has_any_edge(v, z) and self.has_any_edge(w, z)):
+                    dis = self.district_of(v, a | ancestor_dict[z] | {z})
+                    if z in dis:
+                        if verbose: print(f"{z} in district of {v} restricted to spouses, district")
+                        d_triples.add(frozenset({v, w, z}))
+
+        return d_triples | {frozenset(vstruct) for vstruct in self.vstructures()}
+
+    def _tail_of(self, v: Node, w: Node, ancestor_dict: dict):
+        ancestors = ancestor_dict[v] | ancestor_dict[w] | {v, w}
+        d = self.district_of(v, ancestors)
+        p = self.parents_of(d)
+        return p | d - {v, w}
+
+    # === ORDERING
+    def topological_sort(self) -> list:
+        """
+        Return a linear order that is consistent with the partial order implied by ancestral relations of this graph.
+
+        Examples
+        --------
+        >>> from graphical_models import AncestralGraph
+        >>> g = AncestralGraph(bidirected={(1, 2), (1, 4)}, directed={(1, 3), (2, 3)})
+        >>> g.topological_sort()
+        [4, 2, 1, 3]
+        """
+        any_visited = {node: False for node in self._nodes}
+        curr_path_visited = {node: False for node in self._nodes}
+        curr_path = []
+        stack = []
+        for node in self._nodes:
+            if not any_visited[node]:
+                self._mark_children_visited(node, any_visited, curr_path_visited, curr_path, stack)
+        return list(reversed(stack))
+
+    # === COMPARISON
+    def markov_equivalent(self, other) -> bool:
+        """
+        Check if this graph is Markov equivalent to the graph ``other``. Two graphs are Markov equivalent iff.
+        they have the same skeleton, same v-structures, and if whenever there is the same discriminating path for some
+        node in both graphs, the node is a collider on that path in one graph iff. it is a collider on that path in
+        the other graph.
+
+        Parameters
+        ----------
+        other:
+            another AncestralGraph.
+
+        Examples
+        --------
+        TODO
+        """
+        same_skeleton = self.skeleton == other.skeleton
+        same_vstructures = self.vstructures() == other.vstructures()
+
+        self_discriminating_paths = self.discriminating_paths()
+        other_discriminating_paths = other.discriminating_paths()
+        shared_disc_paths = set(self_discriminating_paths.keys()) & set(other_discriminating_paths)
+        same_discriminating = all(
+            self_discriminating_paths[path] == other_discriminating_paths[path]
+            for path in shared_disc_paths
+        )
+
+        return same_skeleton and same_vstructures and same_discriminating
+
+    def fast_markov_equivalent(self, other) -> bool:
+        """
+        Use Algorithm 1 of "Faster algorithms for Markov equivalence" (Hu and Evans, 2020) to check for Markov
+        equivalence between two graphs.
+        """
+        if self.skeleton != other.skeleton:
+            return False
+        if self.vstructures() != other.vstructures():
+            return False
+        if self.discriminating_triples() != other.discriminating_triples():
+            return False
+        return True
+
+    def get_all_mec(self):
+        """
+        TODO
+
+        Examples
+        --------
+        TODO
+        """
+        visited = set()
+        queue = [self]
+        mags = []
+
+        while queue:
+            mag = queue.pop()
+            mags.append(mag)
+            curr_dir, curr_bidir = frozenset(mag._directed), frozenset({frozenset({*e}) for e in mag._bidirected})
+            visited.add((curr_dir, curr_bidir))
+            lmcs_dir, lmcs_bidir = mag.legitimate_mark_changes()
+            for i, j in lmcs_dir:
+                new_dir = curr_dir - {(i, j)}
+                new_bidir = curr_bidir | {frozenset({i, j})}
+                if (new_dir, new_bidir) not in visited:
+                    new_mag = mag.copy()
+                    new_mag.remove_directed(i, j)
+                    new_mag.add_bidirected(i, j)
+                    queue.append(new_mag)
+            for i, j in lmcs_bidir:
+                new_dir = curr_dir | {(i, j)}
+                new_bidir = curr_bidir - {frozenset({i, j})}
+                if (new_dir, new_bidir) not in visited:
+                    new_mag = mag.copy()
+                    new_mag.remove_bidirected(i, j)
+                    new_mag.add_directed(i, j)
+                    queue.append(new_mag)
+
+        return mags
+
+    def shd_skeleton(self, other) -> int:
+        """
+        Compute the structure Hamming distance between the skeleton of this graph and the skeleton of another graph.
+
+        Parameters
+        ----------
+        other:
+            the graph to which the SHD of the skeleton will be computed.
+
+        Return
+        ------
+        int
+            The structural Hamming distance between :math:`G_1` and :math:`G_2` is the minimum number of arc additions,
+            deletions, and reversals required to transform :math:`G_1` into :math:`G_2` (and vice versa).
+
+        Example
+        -------
+        >>> TODO
+        """
+        return len(self.skeleton.symmetric_difference(other.skeleton))
+
+    def as_hashed(self):
+        """
+        TODO
+
+        Examples
+        --------
+        TODO
+        """
+        return frozenset(self._directed), frozenset(self._bidirected), frozenset(self._undirected)
+
+    # === Algorithms
+    def _add_upstream(self, upstream: set, node: Node):
+        for parent in self._parents[node]:
+            if parent not in upstream:
+                upstream.add(parent)
+                self._add_upstream(upstream, parent)
+
+    def _is_collider(self, u: Node, v: Node, w: Node) -> bool:
+        """return True if u-v-w is a collider"""
+        if v in self._children[u] and v in self._children[w]:
+            return True
+        elif v in self._children[u] and v in self._spouses[w]:
+            return True
+        elif v in self._spouses[u] and v in self._children[w]:
+            return True
+        elif v in self._spouses[u] and v in self._spouses[w]:
+            return True
+        else:
+            return False
+
+    def _no_other_path(self, i: Node, j: Node, ancestor_dict: dict) -> bool:
+        """
+        Check if there is any path from ``i`` to ``j`` other than possibly the direct edge i->j.
+        """
+        other_ancestors_j = ancestor_dict[j] - {i}
+        return (other_ancestors_j & self._children[i]) == set()
+
+    # === SEPARATION
     def msep(self, A: Set[Node], B: Set[Node], C: Set[Node]=set()) -> bool:
         """
         Check whether ``A`` and ``B`` are m-separated given ``C``, using the Bayes ball algorithm.
@@ -1925,6 +1806,130 @@ class AncestralGraph:
             i_links = i_p_1_links
 
         return self._nodes.difference(A).difference(C).difference(reachable)
+
+    # === CONVERSION TO OTHER FORMATS
+    def to_amat(self) -> np.ndarray:
+        """
+        Convert the graph into an adjacency matrix.
+        TODO: meaning of numbers
+
+        Returns
+        -------
+        amat
+            The adjacency matrix of this graph.
+
+        Examples
+        --------
+        TODO
+        """
+        amat = np.zeros([self.nnodes, self.nnodes])
+        for i, j in self.directed:
+            amat[i, j] = 2
+            amat[j, i] = 3
+        for i, j in self.bidirected:
+            amat[i, j] = 2
+            amat[j, i] = 2
+        for i, j in self.undirected:
+            amat[i, j] = 3
+            amat[j, i] = 3
+        return amat
+
+    @staticmethod
+    def from_amat(amat: np.ndarray):
+        """
+        Create a graph from an adjacency matrix.
+        TODO: meaning of numbers
+
+        Parameters
+        ----------
+        amat
+            The adjacency matrix
+
+        Examples
+        --------
+        TODO
+        """
+        p = amat.shape[0]
+        directed = set()
+        bidirected = set()
+        undirected = set()
+        for i, j in itr.combinations(set(range(p)), 2):
+            vij = amat[i, j]
+            vji = amat[j, i]
+            if vij == 2 and vji == 3:  # arrowhead at j
+                directed.add((i, j))
+            elif vij == 3 and vji == 2:  # arrowhead at i
+                directed.add((j, i))
+            elif vij == 2 and vji == 2:  # arrowheads at both
+                bidirected.add((i, j))
+            elif vij == 3 and vji == 3:  # no arrowhead
+                undirected.add((i, j))
+        return AncestralGraph(set(range(p)), directed, bidirected, undirected)
+
+    # === CONVERSION TO OTHER GRAPHS
+    def to_maximal(self, new=True, verbose=False):
+        """
+        TODO
+
+        Parameters
+        ----------
+        TODO
+
+        Examples
+        --------
+        TODO
+        """
+        if new:
+            converged = False
+            while not converged:
+                # === NEED DICTIONARY OF ANCESTORS AND C-COMPONENTS TO CHECK INDUCING PATHS
+                ancestor_dict = self.ancestor_dict()
+                c_components = self.c_components()
+                node2component = dict()
+                for ix, component in enumerate(c_components):
+                    for node in component:
+                        node2component[node] = ix
+                if verbose: print('==========')
+                if verbose: print('Ancestor dict:', ancestor_dict)
+                if verbose: print('C components', c_components)
+
+                # === FIND INDUCING PATHS BETWEEN PAIRS OF NODE
+                induced_pairs = []
+
+                non_adjacent_pairs = ((i, j) for i, j in itr.combinations(self._nodes, 2) if
+                                      not self.has_any_edge(i, j))
+                for node1, node2 in non_adjacent_pairs:
+                    check_ancestry = lambda node: node in ancestor_dict[node1] or node in ancestor_dict[node2]
+                    nbrs1 = self._children[node1] | self._spouses[node1]
+                    nbrs2 = self._children[node2] | self._spouses[node2]
+                    if verbose: print(f"-------------\nChecking {node1} and {node2}")
+
+                    # ONLY CHECK PATHS BETWEEN SPOUSES/CHILDREN THAT ARE IN THE SAME C-COMPONENT
+                    for nbr1, nbr2 in itr.product(nbrs1, nbrs2):
+                        same_component = node2component[nbr1] == node2component[nbr2]
+                        if same_component and nbr1 in ancestor_dict[node2] and nbr2 in ancestor_dict[node1]:
+                            if verbose: print(f"Checking neighbors {nbr1} (for {node1}) and {nbr2} (for {node2})")
+                            if self._reachable(nbr1, nbr2, visited=set(), allowed_edges={'b'}, predicate=check_ancestry,
+                                               verbose=verbose):
+                                if verbose: print("Reachable")
+                                induced_pairs.append((node1, node2))
+                                continue
+                            elif verbose:
+                                print("No path")
+                if verbose: print(f"found induced pairs: {induced_pairs}")
+                for node1, node2 in induced_pairs:
+                    self.add_bidirected(node1, node2)
+
+                converged = len(induced_pairs) == 0
+                # print('converged:', converged)
+        else:
+            for i, j in itr.combinations(self._nodes, r=2):
+                if not self.has_any_edge(i, j):
+                    never_msep = not any(self.msep(i, j, S) for S in core_utils.powerset(self._nodes - {i, j}))
+                    if never_msep: self.add_bidirected(i, j)
+
+    def to_pag(self):
+        raise NotImplementedError
 
 
 if __name__ == '__main__':

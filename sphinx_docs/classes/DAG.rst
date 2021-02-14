@@ -93,8 +93,8 @@ Separation statements
    DAG.is_invariant
    DAG.local_markov_statements
 
-Conversion to other formats
----------------------------
+Conversion to/from other formats
+--------------------------------
 .. autosummary::
    :toctree: generated
 

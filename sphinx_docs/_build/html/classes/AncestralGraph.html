@@ -84,14 +84,15 @@
               <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Classes</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">AncestralGraph</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#overview">Overview</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#methods">Methods</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.copy.html">graphical_models.classes.mags.ancestral_graph.AncestralGraph.copy</a></li>
-<li class="toctree-l4"><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.to_amat.html">graphical_models.classes.mags.ancestral_graph.AncestralGraph.to_amat</a></li>
-<li class="toctree-l4"><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.from_amat.html">graphical_models.classes.mags.ancestral_graph.AncestralGraph.from_amat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#overview">Overview</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#copying">Copying</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#information-about-nodes">Information about nodes</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#graph-modification">Graph modification</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#graph-properties">Graph properties</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#ordering">Ordering</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#comparison-to-other-ancestralgraphs">Comparison to other AncestralGraphs</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#functions-for-nodes">Functions for nodes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#separation-statements">Separation Statements</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#conversion-to-from-other-formats">Conversion to/from other formats</a></li>
 </ul>
 </li>
 </ul>
@@ -179,9 +180,8 @@
 <dd><p>Base class for ancestral graphs, used to represent causal models with latent variables.</p>
 </dd></dl>
 
-</div>
-<div class="section" id="methods">
-<h2>Methods<a class="headerlink" href="#methods" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="copying">
+<h3>Copying<a class="headerlink" href="#copying" title="Permalink to this headline">¶</a></h3>
 <table class="longtable docutils align-default">
 <colgroup>
 <col style="width: 10%" />
@@ -191,14 +191,47 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.copy.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.copy" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.copy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.copy</span></code></a>()</p></td>
 <td><p>Return a copy of this ancestral graph.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.to_amat.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.to_amat" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.to_amat"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.to_amat</span></code></a>()</p></td>
-<td><p>Convert the graph into an adjacency matrix.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.from_amat.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.from_amat" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.from_amat"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.from_amat</span></code></a>(amat)</p></td>
-<td><p>Create a graph from an adjacency matrix.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.induced_subgraph.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.induced_subgraph" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.induced_subgraph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.induced_subgraph</span></code></a>(nodes)</p></td>
+<td><p>Return the induced subgraph over only <code class="docutils literal notranslate"><span class="pre">nodes</span></code></p></td>
 </tr>
 </tbody>
 </table>
+</div>
+<div class="section" id="information-about-nodes">
+<h3>Information about nodes<a class="headerlink" href="#information-about-nodes" title="Permalink to this headline">¶</a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.parents_of.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.parents_of" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.parents_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.parents_of</span></code></a>(nodes)</p></td>
+<td><p>Return the parents of the node or set of nodes <code class="docutils literal notranslate"><span class="pre">nodes</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.children_of.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.children_of" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.children_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.children_of</span></code></a>(i)</p></td>
+<td><p>Return the children of the node or set of nodes <code class="docutils literal notranslate"><span class="pre">i</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.spouses_of.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.spouses_of" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.spouses_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.spouses_of</span></code></a>(nodes)</p></td>
+<td><p>Return the spouses of the node or set of nodes <code class="docutils literal notranslate"><span class="pre">nodes</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.neighbors_of.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.neighbors_of" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.neighbors_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.neighbors_of</span></code></a>(nodes)</p></td>
+<td><p>Return the neighbors of the node or set of nodes <code class="docutils literal notranslate"><span class="pre">nodes</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.descendants_of.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.descendants_of" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.descendants_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.descendants_of</span></code></a>(nodes[, …])</p></td>
+<td><p>Return the descendants of the node or set of nodes <code class="docutils literal notranslate"><span class="pre">nodes</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.ancestors_of.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.ancestors_of" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.ancestors_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.ancestors_of</span></code></a>(nodes[, …])</p></td>
+<td><p>Return the ancestors of the node or set of nodes <code class="docutils literal notranslate"><span class="pre">nodes</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.district_of.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.district_of" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.district_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.district_of</span></code></a>(node[, node_subset])</p></td>
+<td><p>Return the district of a node, i.e., the set of nodes reachable by bidirected edges.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.markov_blanket_of.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.markov_blanket_of" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.markov_blanket_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.markov_blanket_of</span></code></a>(node[, flat])</p></td>
+<td><p>Return the Markov blanket of a node with respect to the whole graph.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <div class="section" id="graph-modification">
 <h3>Graph modification<a class="headerlink" href="#graph-modification" title="Permalink to this headline">¶</a></h3>
 <table class="longtable docutils align-default">
@@ -243,6 +276,64 @@
 </tbody>
 </table>
 </div>
+<div class="section" id="graph-properties">
+<h3>Graph properties<a class="headerlink" href="#graph-properties" title="Permalink to this headline">¶</a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.legitimate_mark_changes.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.legitimate_mark_changes" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.legitimate_mark_changes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.legitimate_mark_changes</span></code></a>([…])</p></td>
+<td><p>Return directed edges that can be changed to bidirected edges, and bidirected edges that can be changed to directed edges.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.discriminating_triples.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.discriminating_triples" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.discriminating_triples"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.discriminating_triples</span></code></a>([verbose])</p></td>
+<td><p>Return the discriminating triples of the graph, which are triples of nodes that determine the discriminating paths.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.discriminating_paths.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.discriminating_paths" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.discriminating_paths"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.discriminating_paths</span></code></a>([verbose])</p></td>
+<td><p>TODO</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.is_maximal.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.is_maximal" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.is_maximal"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.is_maximal</span></code></a>([new, verbose])</p></td>
+<td><p>TODO</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.c_components.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.c_components" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.c_components"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.c_components</span></code></a>()</p></td>
+<td><p>Return the c-components of this graph.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.colliders.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.colliders" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.colliders"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.colliders</span></code></a>()</p></td>
+<td><p>TODO</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.vstructures.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.vstructures" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.vstructures"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.vstructures</span></code></a>()</p></td>
+<td><p>TODO</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.has_directed.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.has_directed" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.has_directed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.has_directed</span></code></a>(i, j)</p></td>
+<td><p>Check if this graph has the directed edge <code class="docutils literal notranslate"><span class="pre">i</span></code>-&gt;``j``.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.has_bidirected.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.has_bidirected" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.has_bidirected"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.has_bidirected</span></code></a>(i, j)</p></td>
+<td><p>Check if this graph has a bidirected edge between <code class="docutils literal notranslate"><span class="pre">i</span></code> and <code class="docutils literal notranslate"><span class="pre">j</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.has_undirected.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.has_undirected" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.has_undirected"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.has_undirected</span></code></a>(i, j)</p></td>
+<td><p>Check if this graph has an undirected edge between <code class="docutils literal notranslate"><span class="pre">i</span></code> and <code class="docutils literal notranslate"><span class="pre">j</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.has_any_edge.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.has_any_edge" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.has_any_edge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.has_any_edge</span></code></a>(i, j)</p></td>
+<td><p>Check if <code class="docutils literal notranslate"><span class="pre">i</span></code> and <code class="docutils literal notranslate"><span class="pre">j</span></code> are adjacent in this graph.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="ordering">
+<h3>Ordering<a class="headerlink" href="#ordering" title="Permalink to this headline">¶</a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.topological_sort.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.topological_sort" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.topological_sort"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.topological_sort</span></code></a>()</p></td>
+<td><p>Return a linear order that is consistent with the partial order implied by ancestral relations of this graph.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <div class="section" id="comparison-to-other-ancestralgraphs">
 <h3>Comparison to other AncestralGraphs<a class="headerlink" href="#comparison-to-other-ancestralgraphs" title="Permalink to this headline">¶</a></h3>
 <table class="longtable docutils align-default">
@@ -257,34 +348,45 @@
 <tr class="row-even"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.markov_equivalent.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.markov_equivalent" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.markov_equivalent"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.markov_equivalent</span></code></a>(other)</p></td>
 <td><p>Check if this graph is Markov equivalent to the graph <code class="docutils literal notranslate"><span class="pre">other</span></code>.</p></td>
 </tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.is_imap.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.is_imap" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.is_imap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.is_imap</span></code></a>(other[, certify])</p></td>
+<td><p>Check if this graph is an IMAP of the graph <code class="docutils literal notranslate"><span class="pre">other</span></code>, i.e., all m-separation statements in this graph are also m-separation statements in <code class="docutils literal notranslate"><span class="pre">other</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.is_minimal_imap.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.is_minimal_imap" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.is_minimal_imap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.is_minimal_imap</span></code></a>(other[, …])</p></td>
+<td><p>TODO</p></td>
+</tr>
 </tbody>
 </table>
 </div>
-<div class="section" id="functions-for-nodes">
-<h3>Functions for nodes<a class="headerlink" href="#functions-for-nodes" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="separation-statements">
+<h3>Separation Statements<a class="headerlink" href="#separation-statements" title="Permalink to this headline">¶</a></h3>
 <table class="longtable docutils align-default">
 <colgroup>
 <col style="width: 10%" />
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.descendants_of.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.descendants_of" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.descendants_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.descendants_of</span></code></a>(nodes[, …])</p></td>
-<td><p>Return the descendants of the node or set of nodes <code class="docutils literal notranslate"><span class="pre">nodes</span></code>.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.msep.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.msep" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.msep"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.msep</span></code></a>(A, B[, C])</p></td>
+<td><p>Check whether <code class="docutils literal notranslate"><span class="pre">A</span></code> and <code class="docutils literal notranslate"><span class="pre">B</span></code> are m-separated given <code class="docutils literal notranslate"><span class="pre">C</span></code>, using the Bayes ball algorithm.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.ancestors_of.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.ancestors_of" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.ancestors_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.ancestors_of</span></code></a>(nodes[, …])</p></td>
-<td><p>Return the ancestors of the node or set of nodes <code class="docutils literal notranslate"><span class="pre">nodes</span></code>.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.msep_from_given.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.msep_from_given" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.msep_from_given"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.msep_from_given</span></code></a>(A[, C])</p></td>
+<td><p>Find all nodes m-separated from <code class="docutils literal notranslate"><span class="pre">A</span></code> given <code class="docutils literal notranslate"><span class="pre">C</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.parents_of.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.parents_of" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.parents_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.parents_of</span></code></a>(nodes)</p></td>
-<td><p>Return the parents of the node or set of nodes <code class="docutils literal notranslate"><span class="pre">nodes</span></code>.</p></td>
+</tbody>
+</table>
+</div>
+<div class="section" id="conversion-to-from-other-formats">
+<h3>Conversion to/from other formats<a class="headerlink" href="#conversion-to-from-other-formats" title="Permalink to this headline">¶</a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.to_amat.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.to_amat" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.to_amat"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.to_amat</span></code></a>()</p></td>
+<td><p>Convert the graph into an adjacency matrix.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.children_of.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.children_of" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.children_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.children_of</span></code></a>(i)</p></td>
-<td><p>Return the children of the node or set of nodes <code class="docutils literal notranslate"><span class="pre">i</span></code>.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.spouses_of.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.spouses_of" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.spouses_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.spouses_of</span></code></a>(nodes)</p></td>
-<td><p>Return the spouses of the node or set of nodes <code class="docutils literal notranslate"><span class="pre">nodes</span></code>.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.neighbors_of.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.neighbors_of" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.neighbors_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.neighbors_of</span></code></a>(nodes)</p></td>
-<td><p>Return the neighbors of the node or set of nodes <code class="docutils literal notranslate"><span class="pre">nodes</span></code>.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/graphical_models.classes.mags.ancestral_graph.AncestralGraph.from_amat.html#graphical_models.classes.mags.ancestral_graph.AncestralGraph.from_amat" title="graphical_models.classes.mags.ancestral_graph.AncestralGraph.from_amat"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AncestralGraph.from_amat</span></code></a>(amat)</p></td>
+<td><p>Create a graph from an adjacency matrix.</p></td>
 </tr>
 </tbody>
 </table>

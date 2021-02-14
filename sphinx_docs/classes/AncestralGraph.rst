@@ -9,14 +9,27 @@ Overview
 .. currentmodule:: graphical_models.classes.mags.ancestral_graph
 .. autoclass:: AncestralGraph
 
-Methods
-*******
+Copying
+-------
 .. autosummary::
    :toctree: generated
 
    AncestralGraph.copy
-   AncestralGraph.to_amat
-   AncestralGraph.from_amat
+   AncestralGraph.induced_subgraph
+
+Information about nodes
+-----------------------
+.. autosummary::
+   :toctree: generated
+
+   AncestralGraph.parents_of
+   AncestralGraph.children_of
+   AncestralGraph.spouses_of
+   AncestralGraph.neighbors_of
+   AncestralGraph.descendants_of
+   AncestralGraph.ancestors_of
+   AncestralGraph.district_of
+   AncestralGraph.markov_blanket_of
 
 Graph modification
 ------------------
@@ -35,6 +48,30 @@ Graph modification
    AncestralGraph.remove_edge
    AncestralGraph.remove_edges
 
+Graph properties
+----------------
+.. autosummary::
+   :toctree: generated
+
+   AncestralGraph.legitimate_mark_changes
+   AncestralGraph.discriminating_triples
+   AncestralGraph.discriminating_paths
+   AncestralGraph.is_maximal
+   AncestralGraph.c_components
+   AncestralGraph.colliders
+   AncestralGraph.vstructures
+   AncestralGraph.has_directed
+   AncestralGraph.has_bidirected
+   AncestralGraph.has_undirected
+   AncestralGraph.has_any_edge
+
+Ordering
+--------
+.. autosummary::
+   :toctree: generated
+
+   AncestralGraph.topological_sort
+
 Comparison to other AncestralGraphs
 -----------------------------------
 .. autosummary::
@@ -42,15 +79,21 @@ Comparison to other AncestralGraphs
 
    AncestralGraph.shd_skeleton
    AncestralGraph.markov_equivalent
+   AncestralGraph.is_imap
+   AncestralGraph.is_minimal_imap
 
-Functions for nodes
--------------------
+Separation Statements
+---------------------
 .. autosummary::
    :toctree: generated
 
-   AncestralGraph.descendants_of
-   AncestralGraph.ancestors_of
-   AncestralGraph.parents_of
-   AncestralGraph.children_of
-   AncestralGraph.spouses_of
-   AncestralGraph.neighbors_of
+   AncestralGraph.msep
+   AncestralGraph.msep_from_given
+
+Conversion to/from other formats
+--------------------------------
+.. autosummary::
+   :toctree: generated
+
+   AncestralGraph.to_amat
+   AncestralGraph.from_amat
