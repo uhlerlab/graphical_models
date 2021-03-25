@@ -1344,7 +1344,7 @@ class DAG:
         """
         self_cpdag = self.cpdag()
 
-        from causaldag.classes.pdag import PDAG
+        from graphical_models.classes.dags.pdag import PDAG
         if isinstance(other, PDAG):
             other_cpdag = other
         else:
