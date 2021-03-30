@@ -8,8 +8,7 @@ BidirectedEdge = FrozenSet[Node]
 NodeSet = Union[Hashable, Set[Hashable]]
 
 
-def warn_untested():
-    function_name = inspect.stack()[1][3]
+def warn_untested(function_name="[Need name!]"):
     s = f"{function_name} still needs to be tested. If you intend to use this method, please submit a pull request."
     warn(s)
 

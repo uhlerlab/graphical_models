@@ -1801,7 +1801,7 @@ class DAG:
         >>> g.dsep(1, 3, 2)
         False
         """
-        warn_untested()  # TODO: ADD TEST
+        warn_untested("dsep")  # TODO: ADD TEST
 
         # type coercion
         A = core_utils.to_set(A)
