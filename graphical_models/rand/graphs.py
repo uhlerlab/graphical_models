@@ -218,7 +218,8 @@ def rand_additive_basis(
         noise=lambda size: np.random.normal(0, 1, size=size),
         internal_variance: int = 1,
         num_monte_carlo: int = 10000,
-        progress=False
+        progress=False,
+        r2_key="nparents"
 ):
     """
     Generate a random structural causal model (SCM), using `dag` as the structure, and with each variable
@@ -276,9 +277,12 @@ def rand_additive_basis(
             variance_from_parents = np.var(values_from_parents)
 
             try:
-                desired_r2 = r2_dict[nparents]
+                if r2_key == "nparents":
+                    desired_r2 = r2_dict[nparents]
+                elif r2_key == "node":
+                    desired_r2 = r2_dict[node]
             except ValueError:
-                raise Exception(f"`snr_dict` does not specify a desired R^2 for nodes with {nparents} parents")
+                raise Exception(f"`r2_dict` does not specify a desired R^2 for nodes with {nparents} parents")
             c_node = internal_variance / variance_from_parents * desired_r2 / (1 - desired_r2)
             if np.isnan(c_node):
                 raise ValueError
