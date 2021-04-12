@@ -2257,7 +2257,7 @@ class DAG:
         >>> res_sinks = d1.resolved_sinks(d2)
         {0}
         """
-        warn_untested()  # TODO: ADD TEST
+        # warn_untested()  # TODO: ADD TEST
 
         res_sinks = set()
         while True:
@@ -2293,8 +2293,14 @@ class DAG:
         {(1, 0), (1, 2)}
         >>> sequence[2].arcs
         {(1, 0), (1, 2), (2, 0)}
+        >>> moves
+        [
+            {'sink': 0, 'move': 6, 'd': 2},
+            {'sink': 0, 'move': 4},
+            {'sink': 1, 'move': 6, 'd': 2}
+        ]
         """
-        warn_untested()  # TODO: ADD TEST
+        # warn_untested()  # TODO: ADD TEST
 
         curr_graph = self
 
@@ -2303,7 +2309,7 @@ class DAG:
         last_sink = None
         while curr_graph != imap:
             ch_seq.append(curr_graph)
-            curr_graph, last_sink, move = curr_graph.apply_edge_operation(imap, seed_sink=last_sink, verbose=verbose)
+            curr_graph, move = curr_graph.apply_edge_operation(imap, seed_sink=last_sink, verbose=verbose)
             moves.append(move)
 
         ch_seq.append(imap)
@@ -2333,7 +2339,7 @@ class DAG:
             * The node picked for the operation
             * The type of the edge operation (corresponding to the line of the algorithm in the above paper)
         """
-        warn_untested()  # TODO: ADD TEST
+        # warn_untested()  # TODO: ADD TEST
 
         new_graph = self.copy()
 
@@ -2352,7 +2358,7 @@ class DAG:
             x = random.choice(list(imap_subgraph._parents[sink] - self_subgraph._parents[sink]))
             new_graph.add_arc(x, sink)
             if verbose: print(f"Step 4: Added {x}->{sink}")
-            return new_graph, sink, 4
+            return new_graph, dict(sink=sink, move=4)
 
         # STEP 5: PICK A SPECIFIC CHILD OF Y IN G
         d = list(imap_subgraph.upstream_most(self_subgraph.descendants_of(sink)))[0]
@@ -2365,7 +2371,7 @@ class DAG:
         if self_subgraph.is_reversible(sink, z):
             new_graph.reverse_arc(sink, z)
             if verbose: print(f"Step 6: Reversing {sink}->{z}")
-            return new_graph, sink, 6
+            return new_graph, dict(sink=sink, move=6, d=d)
 
         # STEP 7
         par_z = self_subgraph._parents[z] - self_subgraph._parents[sink] - {sink}
@@ -2374,7 +2380,7 @@ class DAG:
             if verbose: print(f"Step 7: Picked x={x}")
             new_graph.add_arc(x, sink)
             if verbose: print(f"Step 7: Adding {x}->{sink}")
-            return new_graph, sink, 7
+            return new_graph, dict(sink=sink, move=7, d=d)
 
         # STEP 8
         par_sink = self_subgraph._parents[sink] - self_subgraph._parents[z]
@@ -2382,7 +2388,7 @@ class DAG:
         if verbose: print(f"Step 8: Picked x={x}")
         new_graph.add_arc(x, z)
         if verbose: print(f"Step 8: Adding {x}->{z}")
-        return new_graph, sink, 8
+        return new_graph, dict(sink=sink, move=8, d=d)
 
     # === DIRECTED CLIQUE TREES
     def directed_clique_tree(self, verbose=False):
