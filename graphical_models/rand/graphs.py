@@ -156,6 +156,22 @@ def rand_weights(dag, rand_weight_fn: RandWeightFn = unif_away_zero) -> GaussDAG
     return GaussDAG(nodes=list(range(len(dag.nodes))), arcs=dict(zip(dag.arcs, weights)))
 
 
+def rand_normal_wishart(dag, var_dof=None, edge_scale=1, edge_mean=0):
+    arcs = dict()
+    variances = []
+    means = []
+    var_dof = var_dof if var_dof is not None else dag.nnodes + 1
+    nodes = list(dag.nodes)
+    for node in nodes:
+        parents = dag.parents_of(node)
+        var_node = np.random.chisquare((var_dof - dag.nnodes + len(parents) + 1)/2)
+        weights = np.random.normal(edge_mean, var_node * edge_scale, size=len(parents) + 1)
+        variances.append(var_node)
+        means.append(weights[-1])
+        arcs.update({(parent, node): weight for parent, weight in zip(parents, weights[:-1])})
+    return GaussDAG(nodes=list(dag.nodes), arcs=arcs, biases=means, variances=variances)
+
+
 def _leaky_relu(vals):
     return np.where(vals > 0, vals, vals * .01)
 
@@ -216,7 +232,6 @@ def rand_additive_basis(
         r2_dict: Optional[Union[Dict[int, float], float]] = None,
         rand_weight_fn: RandWeightFn = unif_away_zero,
         noise=lambda size: np.random.normal(0, 1, size=size),
-        internal_variance: int = 1,
         num_monte_carlo: int = 10000,
         progress=False,
         r2_key="nparents"
@@ -267,10 +282,19 @@ def rand_additive_basis(
         parents = dag.parents_of(node)
         nparents = dag.indegree_of(node)
         parent2base = dict(zip(parents, random.choices(basis, k=nparents)))
-        parent_weights = rand_weight_fn(size=nparents)
-        parent_vals = np.array([sample_dict[parent] for parent in parents]).T if nparents > 0 else np.zeros([num_monte_carlo, 0])
+        if nparents > 0:
+            parent_vals = np.array([sample_dict[parent] for parent in parents]).T
+            parent_weights = rand_weight_fn(size=nparents)
+        else:
+            parent_vals = np.zeros([num_monte_carlo, 0])
+            parent_weights = dict()
 
-        c_node = 1
+        noise_vals = noise(size=num_monte_carlo)
+        internal_variance = np.var(noise_vals)
+        print("internal variance", node, internal_variance)
+
+        c_node = None
+        b_node = np.sqrt(1/internal_variance)
         if nparents > 0:
             mean_function_no_c = partial(_cam_mean_function, c_node=1, parent_weights=parent_weights, parent2base=parent2base)
             values_from_parents = mean_function_no_c(parent_vals, parents)
@@ -283,20 +307,28 @@ def rand_additive_basis(
                     desired_r2 = r2_dict[node]
             except ValueError:
                 raise Exception(f"`r2_dict` does not specify a desired R^2 for nodes with {nparents} parents")
-            c_node = internal_variance / variance_from_parents * desired_r2 / (1 - desired_r2)
+            c_node = np.sqrt(desired_r2 / variance_from_parents)
+            b_node = np.sqrt((1 - desired_r2) / internal_variance)
             if np.isnan(c_node):
                 raise ValueError
-            print(node, parents, variance_from_parents, parent_weights, c_node)
+            print(node, parents, variance_from_parents, parent_weights, c_node, b_node)
 
         mean_function = partial(_cam_mean_function, c_node=c_node, parent_weights=parent_weights, parent2base=parent2base)
 
         mean_vals = mean_function(parent_vals, parents)
-        sample_dict[node] = mean_vals + noise(size=num_monte_carlo)
+        sample_dict[node] = mean_vals + noise_vals * b_node
+        print("variance of samples", np.var(sample_dict[node]))
 
         cam_dag.set_mean_function(node, mean_function)
-        cam_dag.set_noise(node, noise)
+        cam_dag.set_noise(node, create_scaled_noise_function(b_node, noise))
 
     return cam_dag
+
+
+def create_scaled_noise_function(val, noise):
+    def scaled_noise_function(size):
+        return val * noise(size)
+    return scaled_noise_function
 
 
 # OPTION 1
@@ -427,7 +459,8 @@ __all__ = [
     'rand_nn_functions',
     'unif_away_original',
     'alter_weights',
-    'rand_additive_basis'
+    'rand_additive_basis',
+    'rand_normal_wishart'
 ]
 
 

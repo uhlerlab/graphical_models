@@ -388,6 +388,13 @@ class DAG:
             return set.union(*(self.ancestors_of(node) for node in nodes))
         return ancestors
 
+    def nodes_between(self, source: Node, target: Node):
+        return self.ancestors_of(target) & self.descendants_of(source)
+
+    def edges_between(self, source: Node, target: Node):
+        nodes_between = self.nodes_between(source, target)
+        return {(i, j) for i, j in itr.combinations(nodes_between, 2) if (i, j) in self._arcs}
+
     def incident_arcs(self, node: Node) -> Set[DirectedEdge]:
         """
         Return all arcs with ``node`` as either source or target.

@@ -24,7 +24,7 @@ class GaussDAG(DAG):
             self,
             nodes: List,
             arcs: Union[Set[Tuple[Any, Any]], Dict[Tuple[Any, Any], float]],
-            means=None,
+            biases=None,
             variances=None
     ):
         self._weight_mat = np.zeros((len(nodes), len(nodes)))
@@ -32,7 +32,7 @@ class GaussDAG(DAG):
         self._node2ix = core_utils.ix_map_from_list(self._node_list)
 
         self._variances = np.ones(len(nodes)) if variances is None else np.array(variances, dtype=float)
-        self._means = np.zeros((len(nodes))) if means is None else np.array(means)
+        self._biases = np.zeros((len(nodes))) if biases is None else np.array(biases)
 
         self._precision = None
         self._covariance = None
@@ -55,10 +55,10 @@ class GaussDAG(DAG):
         return DAG(nodes=set(self._node_list), arcs=self.arcs)
 
     def copy(self):
-        return GaussDAG(nodes=self._nodes, arcs=self.arc_weights, means=self._means, variances=self._variances)
+        return GaussDAG(nodes=self._nodes, arcs=self.arc_weights, biases=self._biases, variances=self._variances)
 
     @classmethod
-    def from_amat(cls, weight_mat, nodes=None, means=None, variances=None):
+    def from_amat(cls, weight_mat, nodes=None, biases=None, variances=None):
         """
         Return a GaussDAG with arc weights specified by weight mat.
 
@@ -67,8 +67,8 @@ class GaussDAG(DAG):
         weight_mat:
             Matrix of edge weights, with weight[i, j] being the weight on the arc i->j.
         nodes
-        means:
-            Node residual means.
+        biases:
+            Node biases.
         variances:
             Node residual variances.
 
@@ -78,7 +78,7 @@ class GaussDAG(DAG):
         """
         nodes = nodes if nodes is not None else list(range(weight_mat.shape[0]))
         arcs = {(i, j): w for (i, j), w in np.ndenumerate(weight_mat) if w != 0}
-        return cls(nodes=nodes, arcs=arcs, means=means, variances=variances)
+        return cls(nodes=nodes, arcs=arcs, biases=biases, variances=variances)
 
     @classmethod
     def from_covariance(cls, covariance_matrix: np.ndarray, node_order=None, check=False):
@@ -210,8 +210,12 @@ class GaussDAG(DAG):
         super().remove_arcs_from(ixs[zeros], ignore_error=True)
         super().add_arcs_from(ixs[nonzeros])
 
+    def set_node_bias(self, i, bias):
+        self._biases[i] = bias
+
     def set_node_mean(self, i, mean):
-        self._means[i] = mean
+        self.set_node_bias(i, mean)
+        raise DeprecationWarning("GaussDAG.set_node_mean has been changed to GaussDAG.set_node_bias")
 
     def set_node_variance(self, i, var):
         """
@@ -232,24 +236,24 @@ class GaussDAG(DAG):
 
     def means(self):
         """
-        Return the mean of each node
+        Return the marginal mean of each node
         """
         means = np.zeros(len(self._node_list))
         for i in range(self.nnodes):
             parent_ixs = [self._node2ix[p] for p in self._parents[i]]
-            means[i] = self.weight_mat[parent_ixs, i] @ means[parent_ixs] + self._means[i]
+            means[i] = self.weight_mat[parent_ixs, i] @ means[parent_ixs] + self._biases[i]
         return means
 
     def deterministic_intervention_means(self, intervention: Dict[Any, float]):
         """
-        Return the mean of each node after a deterministic intervention is performed
+        Return the marginal mean of each node after a deterministic intervention is performed
         """
         means = np.zeros(len(self._node_list))
         for i in range(self.nnodes):
             iv_value = intervention.get(i)
             if iv_value is None:
                 parent_ixs = [self._node2ix[p] for p in self._parents[i]]
-                means[i] = self.weight_mat[parent_ixs, i] @ means[parent_ixs] + self._means[i]
+                means[i] = self.weight_mat[parent_ixs, i] @ means[parent_ixs] + self._biases[i]
             else:
                 means[i] = iv_value
         return means
@@ -518,8 +522,8 @@ class GaussDAG(DAG):
         """
         samples = np.zeros((nsamples, len(self._nodes)))
         noise = np.zeros((nsamples, len(self._nodes)))
-        for ix, (mean, var) in enumerate(zip(self._means, self._variances)):
-            noise[:, ix] = np.random.normal(loc=mean, scale=var ** .5, size=nsamples)
+        for ix, (bias, var) in enumerate(zip(self._biases, self._variances)):
+            noise[:, ix] = np.random.normal(loc=bias, scale=var ** .5, size=nsamples)
         t = self.topological_sort()
         for node in t:
             ix = self._node2ix[node]
@@ -548,12 +552,12 @@ class GaussDAG(DAG):
         samples = np.zeros((nsamples, len(self._nodes)))
         noise = np.zeros((nsamples, len(self._nodes)))
 
-        for ix, (node, mean, var) in enumerate(zip(self._node_list, self._means, self._variances)):
+        for ix, (node, bias, var) in enumerate(zip(self._node_list, self._biases, self._variances)):
             interventional_dist = interventions.get(node)
             if interventional_dist is not None:
                 noise[:, ix] = interventional_dist.sample(nsamples)
             else:
-                noise[:, ix] = np.random.normal(loc=mean, scale=var ** .5, size=nsamples)
+                noise[:, ix] = np.random.normal(loc=bias, scale=var ** .5, size=nsamples)
 
         t = self.topological_sort()
         for node in t:
@@ -607,7 +611,7 @@ class GaussDAG(DAG):
         """
         samples = np.zeros((nsamples, len(self._nodes)))
         noise = np.random.normal(size=[nsamples, len(self._nodes)])
-        noise = noise * np.array(self._variances) ** .5 + self._means
+        noise = noise * np.array(self._variances) ** .5 + self._biases
 
         t = self.topological_sort()
         for node in t:
@@ -642,9 +646,9 @@ class GaussDAG(DAG):
 
     def interventional_dag(self, interventions: Dict[Any, Tuple[float, float]]):
         remaining_arcs = {(i, j): w for (i, j), w in self.arc_weights.items() if j not in interventions}
-        new_means = [self._means[node] if node not in interventions else interventions[node][0] for node in self._nodes]
+        new_biases = [self._biases[node] if node not in interventions else interventions[node][0] for node in self._nodes]
         new_variances = [self._variances[node] if node not in interventions else interventions[node][1] for node in self._nodes]
-        return GaussDAG(nodes=self._nodes, arcs=remaining_arcs, means=new_means, variances=new_variances)
+        return GaussDAG(nodes=self._nodes, arcs=remaining_arcs, biases=new_biases, variances=new_variances)
 
     # def logpdf(self, samples: np.array, interventions: Intervention = None) -> np.array:
     #     self._ensure_covariance()
