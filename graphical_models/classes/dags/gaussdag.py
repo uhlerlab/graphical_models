@@ -332,6 +332,14 @@ class GaussDAG(DAG):
             theta = inv(self.correlation[np.ix_([i, j, *cond_set], [i, j, *cond_set])])
             return -theta[0, 1] / np.sqrt(theta[0, 0] * theta[1, 1])
 
+    def regression_coefficients(self, target_ixs, predictor_ixs):
+        if len(predictor_ixs) == 0:
+            return None
+        if not isinstance(target_ixs, list):
+            target_ixs = [target_ixs]
+        cov = self.covariance
+        return inv(cov[np.ix_(target_ixs, target_ixs)]) @ cov[np.ix_(target_ixs, predictor_ixs)]
+
     def add_arc(self, i, j, check_acyclic=False):
         """
         Add an arc to the graph with weight 1.
