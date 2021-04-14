@@ -388,8 +388,69 @@ class DAG:
             return set.union(*(self.ancestors_of(node) for node in nodes))
         return ancestors
 
+    def ancestor_dict(self) -> dict:
+        """
+        Return a dictionary from each node to its ancestors.
+
+        See Also
+        --------
+        ancestors_of
+
+        Return
+        ------
+        Dict[node,Set]
+            Mapping node to ancestors
+
+        Example
+        -------
+        TODO
+        """
+        top_sort = self.topological_sort()
+
+        node2ancestors_plus_self = defaultdict(set)
+        for node in top_sort:
+            node2ancestors_plus_self[node].add(node)
+            for child in self._children[node]:
+                node2ancestors_plus_self[child].update(node2ancestors_plus_self[node])
+
+        for node in self._nodes:
+            node2ancestors_plus_self[node] -= {node}
+
+        return core_utils.defdict2dict(node2ancestors_plus_self, self._nodes)
+
+    def descendant_dict(self) -> dict:
+        """
+        Return a dictionary from each node to its descendants.
+
+        See Also
+        --------
+        ancestors_of
+
+        Return
+        ------
+        Dict[node,Set]
+            Mapping node to ancestors
+
+        Example
+        -------
+        TODO
+        """
+        top_sort = self.topological_sort()
+
+        node2descendants_plus_self = defaultdict(set)
+        for node in reversed(top_sort):
+            node2descendants_plus_self[node].add(node)
+            for parent in self._parents[node]:
+                node2descendants_plus_self[parent].update(node2descendants_plus_self[node])
+
+        for node in self._nodes:
+            node2descendants_plus_self[node] -= {node}
+
+        return core_utils.defdict2dict(node2descendants_plus_self, self._nodes)
+
     def nodes_between(self, source: Node, target: Node):
-        return self.ancestors_of(target) & self.descendants_of(source)
+        between = self.ancestors_of(target) & self.descendants_of(source)
+        return between | {source, target} if len(between) != 0 else between
 
     def edges_between(self, source: Node, target: Node):
         nodes_between = self.nodes_between(source, target)
