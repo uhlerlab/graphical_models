@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name='graphical_models',
-    version='0.1a.009',
+    version='0.1a.0010',
     description='',
     long_description='',
     author='',
