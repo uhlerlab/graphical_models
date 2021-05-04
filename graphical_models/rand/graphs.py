@@ -291,7 +291,7 @@ def rand_additive_basis(
 
         noise_vals = noise(size=num_monte_carlo)
         internal_variance = np.var(noise_vals)
-        print("internal variance", node, internal_variance)
+        # print("internal variance", node, internal_variance)
 
         c_node = None
         b_node = np.sqrt(1/internal_variance)
@@ -311,13 +311,13 @@ def rand_additive_basis(
             b_node = np.sqrt((1 - desired_r2) / internal_variance)
             if np.isnan(c_node):
                 raise ValueError
-            print(node, parents, variance_from_parents, parent_weights, c_node, b_node)
+            # print(node, parents, variance_from_parents, parent_weights, c_node, b_node)
 
         mean_function = partial(_cam_mean_function, c_node=c_node, parent_weights=parent_weights, parent2base=parent2base)
 
         mean_vals = mean_function(parent_vals, parents)
         sample_dict[node] = mean_vals + noise_vals * b_node
-        print("variance of samples", np.var(sample_dict[node]))
+        # print("variance of samples", np.var(sample_dict[node]))
 
         cam_dag.set_mean_function(node, mean_function)
         cam_dag.set_noise(node, create_scaled_noise_function(b_node, noise))
