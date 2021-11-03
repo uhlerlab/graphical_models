@@ -339,10 +339,10 @@ class GaussDAG(DAG):
             target_ixs = [target_ixs]
         cov = self.covariance
         t_ixs, p_ixs = target_ixs, predictor_ixs
-        coefs = inv(cov[np.ix_(t_ixs, t_ixs)]) @ cov[np.ix_(t_ixs, p_ixs)]
+        coefs = inv(cov[np.ix_(p_ixs, p_ixs)]) @ cov[np.ix_(p_ixs, t_ixs)]
         if bias:
             means = self.means()
-            bias = means[t_ixs] - coefs @ means[p_ixs]
+            bias = means[t_ixs] - means[p_ixs] @ coefs
             return coefs, bias
         return coefs
 
