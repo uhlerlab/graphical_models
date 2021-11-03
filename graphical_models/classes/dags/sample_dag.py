@@ -16,15 +16,13 @@ class SampleDAG(DAG):
     def set_conditional(self, node, conditional_distribution: Callable[[np.ndarray], np.ndarray]):
         self.conditionals[node] = conditional_distribution
 
-    def sample(self, nsamples: int = 1, progress=False) -> np.array:  # TODO: parallelize?
+    def sample(self, nsamples: int = 1) -> np.array:  # TODO: parallelize?
         samples = np.zeros((nsamples, len(self._nodes)))
         t = self.topological_sort()
-        r = trange if progress else range
-        for sample_num in r(nsamples):
-            for node in t:
-                node_ix = self._node2ix[node]
-                parent_ixs = [self._node2ix[p] for p in self._parents[node]]
-                samples[sample_num, node_ix] = self.conditionals[node](samples[sample_num, parent_ixs])
+        for node in t:
+            node_ix = self._node2ix[node]
+            parent_ixs = [self._node2ix[p] for p in self._parents[node]]
+            samples[:, node_ix] = self.conditionals[node](samples[:, parent_ixs])
         return samples
 
     def sample_interventional(self, intervention, nsamples: int = 1) -> np.ndarray:
@@ -43,7 +41,6 @@ class SampleDAG(DAG):
                 elif isinstance(interventional_dist, PerfectInterventionalDistribution):
                     samples[:, ix] = interventional_dist.sample(nsamples)
             else:
-                for sample_num in range(nsamples):
-                    samples[sample_num, ix] = self.conditionals[node](samples[sample_num, parent_ixs])
+                samples[:, ix] = self.conditionals[node](samples[:, parent_ixs])
 
         return samples

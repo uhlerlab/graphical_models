@@ -332,13 +332,19 @@ class GaussDAG(DAG):
             theta = inv(self.correlation[np.ix_([i, j, *cond_set], [i, j, *cond_set])])
             return -theta[0, 1] / np.sqrt(theta[0, 0] * theta[1, 1])
 
-    def regression_coefficients(self, target_ixs, predictor_ixs):
+    def regression_coefficients(self, target_ixs, predictor_ixs, bias=True):
         if len(predictor_ixs) == 0:
             return None
         if not isinstance(target_ixs, list):
             target_ixs = [target_ixs]
         cov = self.covariance
-        return inv(cov[np.ix_(target_ixs, target_ixs)]) @ cov[np.ix_(target_ixs, predictor_ixs)]
+        t_ixs, p_ixs = target_ixs, predictor_ixs
+        coefs = inv(cov[np.ix_(t_ixs, t_ixs)]) @ cov[np.ix_(t_ixs, p_ixs)]
+        if bias:
+            means = self.means()
+            bias = means[t_ixs] - coefs @ means[p_ixs]
+            return coefs, bias
+        return coefs
 
     def add_arc(self, i, j, check_acyclic=False):
         """
