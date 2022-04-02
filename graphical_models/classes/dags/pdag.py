@@ -700,10 +700,6 @@ class PDAG:
                 if arc_flags[arc] == NOT_PROTECTED:
                     self._replace_arc_with_edge(arc)
 
-    def change_edge_to_arc(self, i, j):
-        self._edges.remove(frozenset({i, j}))
-        self._arcs.add((i, j))
-
     # === MUTATORS
 
     def _possible_sinks(self):
