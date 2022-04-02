@@ -700,15 +700,9 @@ class PDAG:
                 if arc_flags[arc] == NOT_PROTECTED:
                     self._replace_arc_with_edge(arc)
 
-    def add_known_arc(self, i, j):
-        if (i, j) in self._known_arcs:
-            return
-        self._known_arcs.add((i, j))
+    def change_edge_to_arc(self, i, j):
         self._edges.remove(frozenset({i, j}))
-        self.remove_unprotected_orientations()
-
-    def add_known_arcs(self, arcs):
-        raise NotImplementedError
+        self._arcs.add((i, j))
 
     # === MUTATORS
 

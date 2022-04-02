@@ -173,6 +173,10 @@ class GaussDAG(DAG):
         # TODO: variance
         return GaussDAG.from_amat(normalized_weight_mat)
 
+    def round_weights(self, decimals=2):
+        rounded_weight_mat = np.around(self._weight_mat, decimals=decimals)
+        return GaussDAG.from_amat(rounded_weight_mat)
+
     def set_arc_weight(self, i, j, val):
         """
         Change the weight of the arc i->j to val
@@ -333,17 +337,18 @@ class GaussDAG(DAG):
             return -theta[0, 1] / np.sqrt(theta[0, 0] * theta[1, 1])
 
     def regression_coefficients(self, target_ixs, predictor_ixs, bias=True):
-        if len(predictor_ixs) == 0:
-            return None
+        if len(predictor_ixs) == 0 and not bias:
+            coefs = np.zeros(0)
         if not isinstance(target_ixs, list):
             target_ixs = [target_ixs]
         cov = self.covariance
-        t_ixs, p_ixs = target_ixs, predictor_ixs
+        t_ixs, p_ixs = target_ixs, list(predictor_ixs)
         coefs = inv(cov[np.ix_(p_ixs, p_ixs)]) @ cov[np.ix_(p_ixs, t_ixs)]
         if bias:
             means = self.means()
             bias = means[t_ixs] - means[p_ixs] @ coefs
             return coefs, bias
+            
         return coefs
 
     def add_arc(self, i, j, check_acyclic=False):

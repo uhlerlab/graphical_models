@@ -13,7 +13,6 @@ import networkx as nx
 from networkx.utils import UnionFind
 import random
 import csv
-import ipdb
 from scipy.special import comb
 
 
