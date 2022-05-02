@@ -126,6 +126,10 @@ class DAG:
         """
         return DAG(nodes, {(i, j) for i, j in self._arcs if i in nodes and j in nodes})
 
+    def ancestral_subgraph(self, node):
+        ancestors = self.ancestors_of(node) | {node}
+        return self.induced_subgraph(ancestors)
+
     # === PROPERTIES
     @property
     def nodes(self) -> Set[Node]:

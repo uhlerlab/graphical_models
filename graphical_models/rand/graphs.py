@@ -10,6 +10,8 @@ from tqdm import tqdm
 from functools import partial
 import ipdb
 
+from graphical_models.classes.dags.discrete_dag import DiscreteDAG
+
 # class RandWeightFn(Protocol):
 #     def __call__(self, size: int) -> Union[float, List[float]]: ...
 
@@ -154,6 +156,34 @@ def rand_weights(dag, rand_weight_fn: RandWeightFn = unif_away_zero) -> GaussDAG
     """
     weights = rand_weight_fn(size=len(dag.arcs))
     return GaussDAG(nodes=list(range(len(dag.nodes))), arcs=dict(zip(dag.arcs, weights)))
+
+
+def rand_discrete_dag(dag, node_alphabets=None, alpha=1.0):
+    if node_alphabets is None:
+        node_alphabets = {node: list(range(3)) for node in dag.nodes}
+    
+    conditionals = dict()
+    for node in dag.nodes:
+        parents = dag.parents_of(node)
+        K = len(node_alphabets[node])
+
+        if len(parents) == 0:
+            conditional = np.random.dirichlet([alpha] * K)
+        if len(parents) != 0:
+            parent_alphabet_shape = [len(node_alphabets[p]) for p in parents]
+            conditional = np.random.dirichlet([alpha] * K, size=parent_alphabet_shape)
+        conditionals[node] = conditional
+    
+    dag = DiscreteDAG(
+        nodes=list(range(dag.nnodes)), 
+        arcs=dag.arcs,
+        conditionals=conditionals,
+        node_alphabets=node_alphabets
+    )
+
+
+        
+    return dag
 
 
 def rand_normal_wishart(dag, var_dof=None, edge_scale=1, edge_mean=0):
@@ -460,7 +490,8 @@ __all__ = [
     'unif_away_original',
     'alter_weights',
     'rand_additive_basis',
-    'rand_normal_wishart'
+    'rand_normal_wishart',
+    'rand_discrete_dag'
 ]
 
 
