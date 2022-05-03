@@ -5,7 +5,7 @@ from typing import Dict, List, Hashable
 # === THIRD-PARTY
 import numpy as np
 from tqdm import tqdm
-from einops import repeat
+from einops import repeat, rearrange
 from scipy.special import logsumexp
 
 # === LOCAL
@@ -13,9 +13,18 @@ from graphical_models.utils import core_utils
 from graphical_models.classes.dags.dag import DAG
 
 
+def repeat_dimensions(tensor, curr_dims, new_dims, dim_sizes):
+    start_dims = " ".join([f"d{ix}" for ix in curr_dims]) + " d_new"
+    end_dims = " ".join([f"d{ix}" for ix in new_dims]) + " d_new"
+    repeat_pattern = start_dims + " -> " + end_dims
+    repeats = {f"d{ix}": dim_sizes[ix] for ix in new_dims if ix not in curr_dims}
+    new_tensor = repeat(tensor, repeat_pattern, **repeats)
+    return new_tensor
+
+
 def get_conditional(data, node, vals, parent_ixs, parent_alphabets):
     if len(parent_ixs) == 0:
-        return [(data[:, node] == val).mean() for val in vals]
+        return np.array([(data[:, node] == val).mean() for val in vals])
     else:
         nvals = len(vals)
         conditional = np.ones(list(map(len, parent_alphabets)) + [nvals]) * 1/nvals
@@ -27,17 +36,15 @@ def get_conditional(data, node, vals, parent_ixs, parent_alphabets):
         return conditional
 
 
-def add_variable(table, conditional, parent_ixs):
+def add_variable(table, current_variables, conditional, node2dims, parents):
     log_conditional = np.log(conditional)
-    K = conditional.shape[-1]
-    previous_nodes = list(range(len(table.shape)))
-    nonparent_ixs = [ix for ix in previous_nodes if ix not in parent_ixs]
-    if len(nonparent_ixs) > 0:
-        start_dims = " ".join([f"d{ix}" for ix in parent_ixs]) + f" d_new"
-        new_dims = " ".join([(f"d{ix}" if ix in parent_ixs else f"n{ix}") for ix in previous_nodes]) + f" d_new"
-        pattern = start_dims + " -> " + new_dims
-        repeats = {f"n{ix}": table.shape[ix] for ix in nonparent_ixs}
-        log_conditional = repeat(log_conditional, pattern, **repeats)
+
+    log_conditional = repeat_dimensions(
+        log_conditional,
+        parents,
+        current_variables,
+        node2dims
+    )
     
     table = table.reshape(table.shape + (1, )) + log_conditional
     return table
@@ -53,11 +60,17 @@ class DiscreteDAG(DAG):
         nodes, 
         arcs, 
         conditionals: Dict[Hashable, np.ndarray], 
+        node2parents: Dict[Hashable, List],
         node_alphabets: Dict[Hashable, List]
     ):
         super().__init__(set(nodes), arcs)
         self.conditionals = conditionals
+        self.node2parents = node2parents
         self.node_alphabets = node_alphabets
+        self.node2dims = {
+            node: len(alphabet) 
+            for node, alphabet in self.node_alphabets.items()
+        }
         self._node_list = list(nodes)
         self._node2ix = core_utils.ix_map_from_list(self._node_list)
 
@@ -70,7 +83,7 @@ class DiscreteDAG(DAG):
         t = t if not progress else tqdm(t)
 
         for node in t:
-            parents = list(self._parents[node])
+            parents = self.node2parents[node]
             if len(parents) == 0:
                 vals = np.random.choice(
                     self.node_alphabets[node], 
@@ -91,7 +104,7 @@ class DiscreteDAG(DAG):
         t = self.topological_sort()
 
         for node in t:
-            parents = list(self._parents[node])
+            parents = self.node2parents[node]
             if node == iv_node:
                 vals = [value] * nsamples
             else:
@@ -110,63 +123,81 @@ class DiscreteDAG(DAG):
 
         return samples
 
-    def get_joint_probability_table(self):
-        table = np.ones([len(self.node_alphabets[node]) for node in self._node_list])
-        for node in self._node_list:
-            node_ix = self._node2ix[node]
-            parents = self.parents_of(node)
-            if len(parents) == 0:
-                cond = self.conditionals[node]
-                def mul(arr):
-                    return arr * cond
-                table = np.apply_along_axis(mul, node_ix, table)
-            else:
-                
-                parent_ixs = [self._node2ix[p] for p in parents]
-        return table
+    def get_hard_interventional_dag(self, target_node, value):
+        assert len(self.parents_of(target_node)) == 0
+        node_alphabet = self.node_alphabets[target_node]
+        target_conditional = np.array([0 if v == value else 1 for v in node_alphabet])
+        new_conditionals = {
+            node: self.conditionals[node] if node != target_node else target_conditional
+            for node in self.nodes  
+        }
+        return DiscreteDAG(
+            nodes=self.nodes,
+            arcs=self.arcs,
+            conditionals=new_conditionals,
+            node_alphabets=self.node_alphabets
+        )
 
 
     def get_marginal(self, node, verbose=False):
         ancestor_subgraph = self.ancestral_subgraph(node)
         t = ancestor_subgraph.topological_sort()
-        if verbose: print(ancestor_subgraph)
+        if verbose: print(f"Ancestor subgraph: {ancestor_subgraph}")
 
-        unmarginalized_nodes = t[:-1]
+        current_nodes = [t[0]]
         added_nodes = {t[0]}
         table = np.log(self.conditionals[t[0]])
         
-        for node in t[1:]:
-            node2ix = {node: ix for ix, node in enumerate(unmarginalized_nodes)}
-            parent_ixs = [node2ix[p] for p in self.parents_of(node)]
+        for new_node in t[1:]:
+            node2ix = {node: ix for ix, node in enumerate(current_nodes)}
 
-            if verbose: print(f"====== Adding {node} to {added_nodes} ======")
-            table = add_variable(table, self.conditionals[node], parent_ixs)
-            added_nodes.add(node)
+            if verbose: print(f"====== Adding {new_node} to {current_nodes} ======")
+            table = add_variable(
+                table, 
+                current_nodes,
+                self.conditionals[new_node], 
+                self.node2dims, 
+                self.node2parents[new_node]
+            )
+            current_nodes.append(new_node)
+            added_nodes.add(new_node)
 
             # === MARGINALIZE ANY NODE WHERE ALL CHILDREN HAVE BEEN ADDED
             marginalizable_nodes = {
-                node for node in unmarginalized_nodes 
-                if ancestor_subgraph.children_of(node) <= added_nodes
+                node for node in current_nodes 
+                if (ancestor_subgraph.children_of(node) <= added_nodes)
+                and (node != new_node)
             }
             if verbose: print(f"Marginalizing {marginalizable_nodes}")
             if len(marginalizable_nodes) > 0:
                 table = marginalize(table, [node2ix[node] for node in marginalizable_nodes])
-                unmarginalized_nodes = [
-                    node for node in unmarginalized_nodes
+                current_nodes = [
+                    node for node in current_nodes
                     if node not in marginalizable_nodes
                 ]
+            
             if verbose: print(f"Shape: {table.shape}")
-            if verbose: print(f"Unmarginalized: {unmarginalized_nodes}")
                 
         return np.exp(table)
+
+    def get_mean_and_variance(self, node):
+        alphabet = self.node_alphabets[node]
+        marginal = self.get_marginal(node)
+        terms = [val * marg for val, marg in zip(alphabet, marginal)]
+        mean = sum(terms)
+        terms = [(val - mean)**2 * marg for val, marg in zip(alphabet, marginal)]
+        variance = sum(terms)
+        return mean, variance
 
     @classmethod
     def fit_mle(cls, dag: DAG, data):
         conditionals = dict()
         node_alphabets = dict()
         nodes = dag.topological_sort()
+        node2parents = dict()
         for node in nodes:
             parents = list(dag.parents_of(node))
+            node2parents[node] = parents
             alphabet = list(range(max(data[:, node]) + 1))
             node_alphabets[node] = alphabet
             if len(parents) == 0:
@@ -179,6 +210,7 @@ class DiscreteDAG(DAG):
             nodes,
             dag.arcs,
             conditionals=conditionals,
+            node2parents=node2parents,
             node_alphabets=node_alphabets
         )
 

@@ -16,7 +16,8 @@ setuptools.setup(
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
     ],
     install_requires=[
-        'numpy'
+        'numpy',
+        'einops'
     ]
 )
 

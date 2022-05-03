@@ -163,8 +163,10 @@ def rand_discrete_dag(dag, node_alphabets=None, alpha=1.0):
         node_alphabets = {node: list(range(3)) for node in dag.nodes}
     
     conditionals = dict()
+    node2parents = dict()
     for node in dag.nodes:
-        parents = dag.parents_of(node)
+        parents = list(dag.parents_of(node))
+        node2parents[node] = parents
         K = len(node_alphabets[node])
 
         if len(parents) == 0:
@@ -178,6 +180,7 @@ def rand_discrete_dag(dag, node_alphabets=None, alpha=1.0):
         nodes=list(range(dag.nnodes)), 
         arcs=dag.arcs,
         conditionals=conditionals,
+        node2parents=node2parents,
         node_alphabets=node_alphabets
     )
 
