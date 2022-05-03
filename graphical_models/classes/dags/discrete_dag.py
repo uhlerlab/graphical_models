@@ -14,9 +14,12 @@ from graphical_models.utils import core_utils
 from graphical_models.classes.dags.dag import DAG
 
 
-def repeat_dimensions(tensor, curr_dims, new_dims, dim_sizes):
-    start_dims = " ".join([f"d{ix}" for ix in curr_dims]) + " d_new"
-    end_dims = " ".join([f"d{ix}" for ix in new_dims]) + " d_new"
+def repeat_dimensions(tensor, curr_dims, new_dims, dim_sizes, add_new=True):
+    start_dims = " ".join([f"d{ix}" for ix in curr_dims])
+    end_dims = " ".join([f"d{ix}" for ix in new_dims])
+    if add_new:
+        start_dims += " d_new"
+        end_dims += " d_new"
     repeat_pattern = start_dims + " -> " + end_dims
     repeats = {f"d{ix}": dim_sizes[ix] for ix in new_dims if ix not in curr_dims}
     new_tensor = repeat(tensor, repeat_pattern, **repeats)
@@ -139,6 +142,43 @@ class DiscreteDAG(DAG):
             node2parents=deepcopy(self.node2parents),
             node_alphabets=self.node_alphabets
         )
+
+    def get_marginals(self, marginal_nodes: List[Hashable]):
+        ancestor_subgraph = self.ancestral_subgraph(set(marginal_nodes))
+        t = ancestor_subgraph.topological_sort()
+
+        current_nodes = [t[0]]
+        added_nodes = {t[0]}
+        log_table = np.log(self.conditionals[t[0]])
+        
+        for new_node in t[1:]:
+            node2ix = {node: ix for ix, node in enumerate(current_nodes)}
+
+            log_table = add_variable(
+                log_table, 
+                current_nodes,
+                self.conditionals[new_node], 
+                self.node2dims, 
+                self.node2parents[new_node]
+            )
+            current_nodes.append(new_node)
+            added_nodes.add(new_node)
+
+            # === MARGINALIZE ANY NODE WHERE ALL CHILDREN HAVE BEEN ADDED
+            marginalizable_nodes = {
+                node for node in current_nodes 
+                if (ancestor_subgraph.children_of(node) <= added_nodes)
+                and (node not in marginal_nodes)
+            }
+            if len(marginalizable_nodes) > 0:
+                log_table = marginalize(log_table, [node2ix[node] for node in marginalizable_nodes])
+                current_nodes = [
+                    node for node in current_nodes
+                    if node not in marginalizable_nodes
+                ]
+        
+        table = np.exp(log_table)
+        return repeat_dimensions(table, current_nodes, marginal_nodes, None, add_new=False)
 
 
     def get_marginal(self, node, verbose=False):
