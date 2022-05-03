@@ -1,11 +1,12 @@
 # === BUILT-IN
 import itertools as itr
 from typing import Dict, List, Hashable
+from copy import deepcopy
 
 # === THIRD-PARTY
 import numpy as np
 from tqdm import tqdm
-from einops import repeat, rearrange
+from einops import repeat
 from scipy.special import logsumexp
 
 # === LOCAL
@@ -135,6 +136,7 @@ class DiscreteDAG(DAG):
             nodes=self.nodes,
             arcs=self.arcs,
             conditionals=new_conditionals,
+            node2parents=deepcopy(self.node2parents),
             node_alphabets=self.node_alphabets
         )
 
