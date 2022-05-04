@@ -143,7 +143,7 @@ class DiscreteDAG(DAG):
             node_alphabets=self.node_alphabets
         )
 
-    def get_marginals(self, marginal_nodes: List[Hashable]):
+    def get_marginals(self, marginal_nodes: List[Hashable], log=False):
         ancestor_subgraph = self.ancestral_subgraph(set(marginal_nodes))
         t = ancestor_subgraph.topological_sort()
 
@@ -177,11 +177,13 @@ class DiscreteDAG(DAG):
                     if node not in marginalizable_nodes
                 ]
         
-        table = np.exp(log_table)
+        if not log:
+            table = np.exp(log_table)
+        else:
+            table = log_table
         return repeat_dimensions(table, current_nodes, marginal_nodes, None, add_new=False)
 
-
-    def get_marginal(self, node, verbose=False):
+    def get_marginal(self, node, verbose=False, log=False):
         ancestor_subgraph = self.ancestral_subgraph(node)
         t = ancestor_subgraph.topological_sort()
         if verbose: print(f"Ancestor subgraph: {ancestor_subgraph}")
@@ -221,6 +223,14 @@ class DiscreteDAG(DAG):
             if verbose: print(f"Shape: {table.shape}")
                 
         return np.exp(table)
+
+    def get_conditional(self, marginal_nodes, cond_nodes):
+        all_nodes = marginal_nodes + cond_nodes
+        full_marginal = self.get_marginals(all_nodes, log=True)
+        cond_marginal = marginalize(full_marginal, list(range(len(marginal_nodes))))
+        cond_marginal = cond_marginal.reshape((1, ) * len(marginal_nodes) + cond_marginal.shape)
+        conditional = full_marginal - cond_marginal
+        return np.exp(conditional)
 
     def get_mean_and_variance(self, node):
         alphabet = self.node_alphabets[node]
