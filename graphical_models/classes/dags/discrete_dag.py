@@ -2,6 +2,7 @@
 import itertools as itr
 from typing import Dict, List, Hashable
 from copy import deepcopy
+from functools import reduce
 
 # === THIRD-PARTY
 import numpy as np
@@ -230,6 +231,36 @@ class DiscreteDAG(DAG):
         cond_marginal = marginalize(full_marginal, list(range(len(marginal_nodes))))
         cond_marginal = cond_marginal.reshape((1, ) * len(marginal_nodes) + cond_marginal.shape)
         conditional = full_marginal - cond_marginal
+        return np.exp(conditional)
+
+    def get_conditional2(self, marginal_nodes, cond_nodes):
+        marginal_nodes_no_repeats = [node for node in marginal_nodes if node not in cond_nodes]
+        all_nodes = marginal_nodes_no_repeats + cond_nodes
+        full_marginal = self.get_marginals(all_nodes, log=True)
+        cond_marginal = marginalize(full_marginal, list(range(len(marginal_nodes_no_repeats))))
+        cond_marginal = cond_marginal.reshape((1, ) * len(marginal_nodes_no_repeats) + cond_marginal.shape)
+        # TODO: account for division by zero
+        conditional = full_marginal - cond_marginal
+        if len(marginal_nodes) != len(marginal_nodes_no_repeats):
+            marginal_nodes_repeat = [node for node in marginal_nodes if node in cond_nodes]
+            start_dims = " ".join([f"d{ix}" for ix in all_nodes])
+            end_dims = " ".join([
+                f"d{node}" if node in marginal_nodes_no_repeats else f"r{node}" 
+                for node in marginal_nodes
+            ])
+            end_dims += " " + " ".join([f"d{node}" for node in cond_nodes])
+            pattern = start_dims + " -> " + end_dims
+            repeats = {f"r{node}": self.node2dims[node] for node in marginal_nodes_repeat}
+            conditional = repeat(conditional, pattern, **repeats)
+            ones = [np.eye(self.node2dims[node]) for node in marginal_nodes_repeat]
+            if len(ones) > 1:
+                raise NotImplementedError
+            else:
+                ones = ones[0]
+                rep_node = marginal_nodes_repeat[0]
+                repeats = {f"d{node}": self.node2dims[node] for node in all_nodes if node != rep_node}
+                ones = repeat(ones, f"d{rep_node} r{rep_node} -> {end_dims}", **repeats)
+            conditional = conditional * ones
         return np.exp(conditional)
 
     def get_mean_and_variance(self, node):
