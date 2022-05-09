@@ -227,14 +227,6 @@ class DiscreteDAG(DAG):
         return np.exp(table)
 
     def get_conditional(self, marginal_nodes, cond_nodes):
-        all_nodes = marginal_nodes + cond_nodes
-        full_marginal = self.get_marginals(all_nodes, log=True)
-        cond_marginal = marginalize(full_marginal, list(range(len(marginal_nodes))))
-        cond_marginal = cond_marginal.reshape((1, ) * len(marginal_nodes) + cond_marginal.shape)
-        conditional = full_marginal - cond_marginal
-        return np.exp(conditional)
-
-    def get_conditional2(self, marginal_nodes, cond_nodes):
         marginal_nodes_no_repeats = [node for node in marginal_nodes if node not in cond_nodes]
 
         # === COMPUTE MARGINAL OVER ALL INVOLVED NODES
