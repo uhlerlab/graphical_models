@@ -4,6 +4,7 @@ from typing import Dict, List, Hashable
 from copy import deepcopy
 from functools import reduce
 from math import prod
+from collections import defaultdict
 
 # === THIRD-PARTY
 import numpy as np
@@ -283,16 +284,22 @@ class DiscreteDAG(DAG):
         return mean, variance
 
     @classmethod
-    def fit_mle(cls, dag: DAG, data):
+    def fit_mle(cls, dag: DAG, data, node_alphabets=None):
         conditionals = dict()
-        node_alphabets = dict()
+        infer_node_alphabets = node_alphabets is None
+        if infer_node_alphabets:
+            node_alphabets = dict()
         nodes = dag.topological_sort()
         node2parents = dict()
         for node in nodes:
             parents = list(dag.parents_of(node))
             node2parents[node] = parents
-            alphabet = list(range(max(data[:, node]) + 1))
-            node_alphabets[node] = alphabet
+            if infer_node_alphabets:
+                alphabet = list(range(max(data[:, node]) + 1))
+                node_alphabets[node] = alphabet
+            else:
+                alphabet = node_alphabets[node]
+            
             if len(parents) == 0:
                 conditionals[node] = get_conditional(data, node, alphabet, [], [])
             else:
@@ -306,6 +313,65 @@ class DiscreteDAG(DAG):
             node2parents=node2parents,
             node_alphabets=node_alphabets
         )
+
+    def get_efficient_influence_function_conditionals(self, target_ix, cond_ix, cond_value):
+        # ADD TERMS FROM THE EFFICIENT INFLUENCE FUNCTION
+        conds2counts = defaultdict(int)
+        for node in self.nodes:
+            parents = frozenset(self.parents_of(node))
+            parents_and_node = parents | {node}
+            conds2counts[parents_and_node] += 1
+            conds2counts[parents] -= 1
+        # REMOVE ZEROS AND CONVERT TO TUPLES
+        conds2counts = {
+            tuple(predictor_set): count
+            for predictor_set, count in conds2counts.items() if count != 0
+        }
+        
+        target_values = self.node_alphabets[target_ix]
+        indicator = np.array(self.node_alphabets[cond_ix]) == cond_value
+        values = np.outer(indicator, target_values)
+
+        conds2means = dict()
+        for cond_set in conds2counts:
+            if len(cond_set) == 0:
+                probs = self.get_marginals([cond_ix, target_ix])
+                conds2means[cond_set] = (values * probs).sum()
+            else:
+                # === COMPUTE CONDITIONAL EXPECTATION
+                probs = self.get_conditional([cond_ix, target_ix], list(cond_set))
+                values2 = values.reshape(values.shape + (1, ) * len(cond_set))
+                exp_val_function = (values2 * probs).sum((0, 1))
+                conds2means[cond_set] = exp_val_function
+        
+        return conds2counts, conds2means
+    
+    def get_efficient_influence_function(self, target_ix, cond_ix, cond_value, propensity=None):
+        if propensity is None:
+            propensity = self.get_marginal(cond_ix)[cond_value]
+
+        conds2counts, conds2means = self.get_efficient_influence_function_conditionals(
+            target_ix,
+            cond_ix,
+            cond_value
+        )
+        
+        def efficient_influence_function(samples):
+            eif_terms = np.zeros((samples.shape[0], len(conds2means)))
+            for ix, cond_set in enumerate(conds2means):
+                conditional_mean = conds2means[cond_set]
+                count = conds2counts[cond_set]
+                if len(cond_set) == 0:
+                    eif_terms[:, ix] = conditional_mean * count
+                else:
+                    ixs = samples[:, cond_set]
+                    eif_terms[:, ix] = conditional_mean[tuple(ixs.T)] * count
+            eif = np.sum(eif_terms, axis=1)
+            breakpoint()
+            return eif / propensity
+
+        return efficient_influence_function
+            
 
 
 if __name__ == "__main__":
