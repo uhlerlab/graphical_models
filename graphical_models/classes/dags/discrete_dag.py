@@ -3,6 +3,7 @@ import itertools as itr
 from typing import Dict, List, Hashable
 from copy import deepcopy
 from functools import reduce
+from math import prod
 
 # === THIRD-PARTY
 import numpy as np
@@ -235,12 +236,27 @@ class DiscreteDAG(DAG):
 
     def get_conditional2(self, marginal_nodes, cond_nodes):
         marginal_nodes_no_repeats = [node for node in marginal_nodes if node not in cond_nodes]
+
+        # === COMPUTE MARGINAL OVER ALL INVOLVED NODES
         all_nodes = marginal_nodes_no_repeats + cond_nodes
-        full_marginal = self.get_marginals(all_nodes, log=True)
-        cond_marginal = marginalize(full_marginal, list(range(len(marginal_nodes_no_repeats))))
-        cond_marginal = cond_marginal.reshape((1, ) * len(marginal_nodes_no_repeats) + cond_marginal.shape)
-        # TODO: account for division by zero
-        conditional = full_marginal - cond_marginal
+        full_log_marginal = self.get_marginals(all_nodes, log=True)
+
+        # === MARGINALIZE TO JUST THE CONDITIONING SET AND RESHAPE
+        cond_log_marginal = marginalize(full_log_marginal, list(range(len(marginal_nodes_no_repeats))))
+        cond_log_marginal_rs = cond_log_marginal.reshape((1, ) * len(marginal_nodes_no_repeats) + cond_log_marginal.shape)
+
+        # === COMPUTE CONDITIONAL BY SUBTRACTION IN LOG DOMAIN, THEN EXPONENTIATE
+        log_conditional = full_log_marginal - cond_log_marginal_rs
+        conditional = np.exp(log_conditional)
+
+        # === ACCOUNT FOR DIVISION BY ZERO
+        ixs = np.where(cond_log_marginal == -np.inf)
+        marginal_alphabet_size = prod((self.node2dims[node] for node in marginal_nodes_no_repeats))
+        for ix in zip(*ixs):
+            full_index = (slice(None),) * len(marginal_nodes_no_repeats) + ix
+            conditional[full_index] = 1/marginal_alphabet_size
+
+        # === ACCOUNT FOR ANY NODES THAT ARE IN BOTH THE MARGINAL AND CONDITIONAL
         if len(marginal_nodes) != len(marginal_nodes_no_repeats):
             marginal_nodes_repeat = [node for node in marginal_nodes if node in cond_nodes]
             start_dims = " ".join([f"d{ix}" for ix in all_nodes])
@@ -252,6 +268,7 @@ class DiscreteDAG(DAG):
             pattern = start_dims + " -> " + end_dims
             repeats = {f"r{node}": self.node2dims[node] for node in marginal_nodes_repeat}
             conditional = repeat(conditional, pattern, **repeats)
+
             ones = [np.eye(self.node2dims[node]) for node in marginal_nodes_repeat]
             if len(ones) > 1:
                 raise NotImplementedError
@@ -261,7 +278,8 @@ class DiscreteDAG(DAG):
                 repeats = {f"d{node}": self.node2dims[node] for node in all_nodes if node != rep_node}
                 ones = repeat(ones, f"d{rep_node} r{rep_node} -> {end_dims}", **repeats)
             conditional = conditional * ones
-        return np.exp(conditional)
+        
+        return conditional
 
     def get_mean_and_variance(self, node):
         alphabet = self.node_alphabets[node]
