@@ -1211,6 +1211,20 @@ class DAG:
         """
         return len(self.skeleton.symmetric_difference(other.skeleton))
 
+    def get_standard_imset(self):
+        conds2counts = defaultdict(int)
+        for node in self.nodes:
+            parents = frozenset(self.parents_of(node))
+            parents_and_node = parents | {node}
+            conds2counts[parents_and_node] += 1
+            conds2counts[parents] -= 1
+        # REMOVE ZEROS AND CONVERT TO TUPLES
+        conds2counts = {
+            tuple(predictor_set): count
+            for predictor_set, count in conds2counts.items() if count != 0
+        }
+        return conds2counts
+
     def markov_equivalent(self, other, interventions=None) -> bool:
         """
         Check if this DAG is (interventionally) Markov equivalent to the DAG ``other``.

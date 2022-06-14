@@ -8,7 +8,7 @@ from typing import Any, Dict, Union, Set, Tuple, List
 
 import numpy as np
 from numpy import sqrt, diag
-from numpy.linalg import inv
+from numpy.linalg import inv, lstsq
 from scipy.linalg import cholesky
 from scipy.stats import norm
 
@@ -17,6 +17,16 @@ from ..interventions import Intervention, SoftInterventionalDistribution, \
     PerfectInterventionalDistribution, PerfectIntervention, SoftIntervention, GaussIntervention, BinaryIntervention, \
     MultinomialIntervention, ConstantIntervention
 from graphical_models.utils import core_utils
+
+
+def cholesky_no_permutation(mat):
+    u_chol = cholesky(mat, lower=True)  # compute L s.t. precision = L @ L.T
+    u_chol[np.isclose(u_chol, 0)] = 0
+    u_diag = np.diag(u_chol)
+    d = u_diag**2
+    u = u_chol / u_diag
+    amat = np.eye(mat.shape[0]) - u
+    return amat, d
 
 
 class GaussDAG(DAG):
@@ -100,6 +110,37 @@ class GaussDAG(DAG):
             raise ValueError('Covariance matrix is not symmetric')
         precision = inv(covariance_matrix)
         return GaussDAG.from_precision(precision, node_order, check=check)
+
+    @classmethod
+    def fit_mle(cls, dag, samples):
+        n, p = samples.shape
+        extended_samples = np.hstack((samples, np.ones((n, 1))))
+        cov = np.cov(extended_samples, rowvar=False)
+        amat = np.zeros((p, p))
+        biases = np.zeros(p)
+        variances = np.zeros(p)
+        for node in dag.nodes:
+            parents = list(dag.parents_of(node)) + [p]
+            coefs, _, _, _ = lstsq(cov[np.ix_(parents, parents)], cov[parents, node])
+            bias = coefs[-1]
+            variance = cov[node, node] - coefs.T @ cov[np.ix_(parents, parents)] @ coefs
+            amat[parents[:-1], node] = coefs[:-1]
+            biases[node] = bias
+            variances[node] = variance
+        return GaussDAG.from_amat(
+            amat,
+            biases=biases,
+            variances=variances
+        )
+
+    def direct_effects(self):
+        p = self.nnodes
+        effects = np.zeros((p, p))
+        A = self.weight_mat
+        for k in range(p):
+            effects += A
+            A = A @ self.weight_mat
+        return effects
 
     @classmethod
     def from_precision(cls, precision_matrix, node_order=None, check=False):
@@ -681,6 +722,21 @@ class GaussDAG(DAG):
     #         adjusted_means = None
     #         adjusted_cov = self.interventional_covariance(intervened_nodes)
     #         return multivariate_normal.logpdf(samples, meabn=adjusted_means, cov=adjusted_cov)
+
+    def fast_logpdf(self, samples, nodes):
+        if len(nodes) == 0:
+            return np.zeros(samples.shape[0])
+        cov = self.covariance[np.ix_(nodes, nodes)]
+        mean = self.means()[nodes]
+        vals, vecs = np.linalg.eigh(cov)
+        logdet     = np.sum(np.log(vals))
+        valsinv    = 1./vals
+        U          = vecs * np.sqrt(valsinv)
+        dim        = len(vals)
+        dev        = samples[:, nodes] - mean
+        maha       = np.square(np.dot(dev, U)).sum(axis=1)
+        log2pi     = np.log(2 * np.pi)
+        return -0.5 * (dim * log2pi + maha + logdet)
 
     def logpdf(self, samples: np.array, interventions: PerfectIntervention = None,
                exclude_intervention_prob=True) -> np.array:

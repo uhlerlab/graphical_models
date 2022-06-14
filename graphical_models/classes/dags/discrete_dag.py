@@ -101,7 +101,10 @@ class DiscreteDAG(DAG):
                 parent_ixs = [self._node2ix[p] for p in parents]
                 parent_vals = samples[:, parent_ixs]
                 dists = [self.conditionals[node][tuple(v)] for v in parent_vals]
-                vals = [np.random.choice(self.node_alphabets[node], p=d) for d in dists]
+                dists2 = np.array(dists)
+                unifs = np.random.random(size=nsamples)
+                dist_sums = np.cumsum(dists2, axis=1)
+                vals = np.argmax(dist_sums > unifs[:, None], axis=1)
             samples[:, self._node2ix[node]] = vals
 
         return samples
@@ -316,17 +319,7 @@ class DiscreteDAG(DAG):
 
     def get_efficient_influence_function_conditionals(self, target_ix, cond_ix, cond_value):
         # ADD TERMS FROM THE EFFICIENT INFLUENCE FUNCTION
-        conds2counts = defaultdict(int)
-        for node in self.nodes:
-            parents = frozenset(self.parents_of(node))
-            parents_and_node = parents | {node}
-            conds2counts[parents_and_node] += 1
-            conds2counts[parents] -= 1
-        # REMOVE ZEROS AND CONVERT TO TUPLES
-        conds2counts = {
-            tuple(predictor_set): count
-            for predictor_set, count in conds2counts.items() if count != 0
-        }
+        conds2counts = self.get_standard_imset()
         
         target_values = self.node_alphabets[target_ix]
         indicator = np.array(self.node_alphabets[cond_ix]) == cond_value
