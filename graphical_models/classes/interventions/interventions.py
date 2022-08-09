@@ -1,6 +1,9 @@
-from typing import NewType, Dict, Any, List, Union, Optional
-import numpy as np
+# === IMPORTS: BUILT-IN ===
 from dataclasses import dataclass
+from typing import NewType, Dict, Any, List, Union, Optional
+
+# === IMPORTS: THIRD-PARTY ===
+import numpy as np
 from scipy.stats import norm
 
 

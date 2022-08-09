@@ -1,10 +1,14 @@
-from collections import defaultdict
+# === IMPORTS: BUILT-IN ===
 from copy import deepcopy
-import numpy as np
-# from cvxopt import spmatrix
-from networkx import Graph
-from graphical_models.custom_types import Node, UndirectedEdge
+from collections import defaultdict
 from typing import Set, Iterable, Dict
+
+# === IMPORTS: THIRD-PARTY ===
+import numpy as np
+from networkx import Graph
+
+# === IMPORTS: LOCAL ===
+from graphical_models.custom_types import Node, UndirectedEdge
 
 
 class UndirectedGraph:

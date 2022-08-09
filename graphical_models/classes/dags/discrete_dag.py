@@ -15,6 +15,7 @@ from scipy.special import logsumexp
 # === LOCAL
 from graphical_models.utils import core_utils
 from graphical_models.classes.dags.dag import DAG
+from graphical_models.classes.dags.functional_dag import FunctionalDAG
 
 
 def repeat_dimensions(tensor, curr_dims, new_dims, dim_sizes, add_new=True):
@@ -61,7 +62,7 @@ def marginalize(table, ixs):
     return logsumexp(table, axis=tuple(ixs))
 
 
-class DiscreteDAG(DAG):
+class DiscreteDAG(FunctionalDAG):
     def __init__(
         self, 
         nodes, 
@@ -133,6 +134,12 @@ class DiscreteDAG(DAG):
 
         return samples
 
+    def log_probability(self, samples: np.ndarray):
+        raise NotImplementedError
+    
+    def predict_from_parents(self, node, parent_vals):
+        pass
+        
     def get_hard_interventional_dag(self, target_node, value):
         assert len(self.parents_of(target_node)) == 0
         node_alphabet = self.node_alphabets[target_node]

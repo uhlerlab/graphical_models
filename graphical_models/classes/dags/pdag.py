@@ -2,17 +2,22 @@
 """
 Base class for partially directed acyclic graphs
 """
-
-from collections import defaultdict
-from graphical_models.utils import core_utils
+# === IMPORTS: BUILT-IN ===
+from typing import Set, FrozenSet, Iterable
 import itertools as itr
-import numpy as np
-from typing import Set
+from collections import defaultdict
 from collections import namedtuple
+
+
+# === IMPORTS: THIRD-PARTY ===
+import csv
+import numpy as np
 from scipy.special import factorial
 import networkx as nx
-from typing import Set, FrozenSet, Iterable
-import csv
+
+# === IMPORTS: LOCAL ===
+from graphical_models.utils import core_utils
+
 
 SmallDag = namedtuple('SmallDag', ['arcs', 'reversible_arcs', 'parents_dict', 'children_dict', 'level'])
 

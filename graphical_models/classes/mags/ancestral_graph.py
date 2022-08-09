@@ -1,10 +1,15 @@
-from collections import defaultdict
-from graphical_models.utils import core_utils
-import itertools as itr
-import numpy as np
+# === IMPORTS: BUILT-IN ===
 import random
+import itertools as itr
+from collections import defaultdict
 from typing import List, Iterable, Set, Dict, Hashable, Tuple, FrozenSet, Union
+
+# === IMPORTS: THIRD-PARTY ===
+import numpy as np
+
+# === IMPORTS: LOCAL ===
 from graphical_models.custom_types import Node, DirectedEdge, BidirectedEdge, UndirectedEdge, NodeSet, warn_untested
+from graphical_models.utils import core_utils
 
 
 class CycleError(Exception):

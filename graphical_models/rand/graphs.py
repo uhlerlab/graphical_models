@@ -1,15 +1,17 @@
-import numpy as np
-from collections import defaultdict
+# === IMPORTS: BUILT-IN ===
 import random
-from graphical_models import DAG, GaussDAG, SampleDAG, CamDAG
 import itertools as itr
-from typing import Union, List, Callable, Optional, Any, Dict
-from networkx import barabasi_albert_graph, fast_gnp_random_graph
-from scipy.special import comb
-from tqdm import tqdm
 from functools import partial
-import ipdb
+from typing import Union, List, Callable, Optional, Any, Dict
 
+# === IMPORTS: THIRD-PARTY ===
+import numpy as np
+from tqdm import tqdm
+from scipy.special import comb
+from networkx import barabasi_albert_graph, fast_gnp_random_graph
+
+# === IMPORTS: LOCAL ===
+from graphical_models import DAG, GaussDAG, SampleDAG, CamDAG
 from graphical_models.classes.dags.discrete_dag import DiscreteDAG
 
 # class RandWeightFn(Protocol):

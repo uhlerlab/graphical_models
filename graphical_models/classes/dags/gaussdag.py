@@ -2,16 +2,19 @@
 """
 Base class for DAGs representing Gaussian distributions (i.e. linear SEMs with Gaussian noise).
 """
+# === IMPORTS: BUILT-IN ===
 import operator as op
 import itertools as itr
 from typing import Any, Dict, Union, Set, Tuple, List
 
+# === IMPORTS: THIRD-PARTY ===
 import numpy as np
 from numpy import sqrt, diag
 from numpy.linalg import inv, lstsq
 from scipy.linalg import cholesky
 from scipy.stats import norm
 
+# === IMPORTS: LOCAL ===
 from .dag import DAG
 from ..interventions import Intervention, SoftInterventionalDistribution, \
     PerfectInterventionalDistribution, PerfectIntervention, SoftIntervention, GaussIntervention, BinaryIntervention, \
@@ -737,6 +740,16 @@ class GaussDAG(DAG):
         maha       = np.square(np.dot(dev, U)).sum(axis=1)
         log2pi     = np.log(2 * np.pi)
         return -0.5 * (dim * log2pi + maha + logdet)
+    
+    def log_probability(self, samples: np.ndarray):
+        return self.fast_logpdf(samples, list(range(self.nnodes)))
+    
+    def predict_from_parents(self, node, parent_vals):
+        node_ix = self._node2ix[node]
+        parent_ixs = [self._node2ix[p] for p in self.parents_of(node)]
+        coefs = self._weight_mat[parent_ixs, node_ix]
+        bias = self._biases[node_ix]
+        return parent_vals @ coefs + bias
 
     def logpdf(self, samples: np.array, interventions: PerfectIntervention = None,
                exclude_intervention_prob=True) -> np.array:

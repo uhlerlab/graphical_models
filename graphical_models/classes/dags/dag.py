@@ -1,19 +1,23 @@
 # Author: Chandler Squires
 """Base class for causal DAGs
 """
-
-from collections import defaultdict
-import numpy as np
-import itertools as itr
-from graphical_models.utils import core_utils
+# === IMPORTS: BUILT-IN ===
+import random
 import operator as op
-from graphical_models.custom_types import Node, DirectedEdge, NodeSet, warn_untested
+import itertools as itr
+from collections import defaultdict
 from typing import Set, Union, Tuple, Any, Iterable, Dict, FrozenSet, List
+
+# === IMPORTS: THIRD-PARTY ===
+import csv
+import numpy as np
+from scipy.special import comb
 import networkx as nx
 from networkx.utils import UnionFind
-import random
-import csv
-from scipy.special import comb
+
+# === IMPORTS: LOCAL ===
+from graphical_models.utils import core_utils
+from graphical_models.custom_types import Node, DirectedEdge, NodeSet, warn_untested
 
 
 class CycleError(Exception):

@@ -1,10 +1,17 @@
-from .undirected_graph import UndirectedGraph
+# === IMPORTS: BUILT-IN ===
 import itertools as itr
+
+# === IMPORTS: THIRD-PARTY ===
 import numpy as np
 from numpy.linalg import inv
 from numpy import sqrt, diag, eye
-from graphical_models.utils import core_utils
 from numpy.random import multivariate_normal
+
+# === IMPORTS: LOCAL ===
+from graphical_models.utils import core_utils
+from .undirected_graph import UndirectedGraph
+
+
 
 
 class GGM(UndirectedGraph):

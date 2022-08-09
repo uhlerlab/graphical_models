@@ -1,9 +1,16 @@
-from .dag import DAG
-import numpy as np
-from graphical_models.utils import core_utils
+# === IMPORTS: BUILT-IN ===
 from typing import Callable
-from graphical_models.classes.interventions import Intervention, SoftInterventionalDistribution, PerfectInterventionalDistribution
+
+# === IMPORTS: THIRD-PARTY ===
 from tqdm import trange
+import numpy as np
+
+# === IMPORTS: LOCAL ===
+from .dag import DAG
+from graphical_models.utils import core_utils
+from graphical_models.classes.interventions import Intervention
+from graphical_models.classes.interventions import SoftInterventionalDistribution
+from graphical_models.classes.interventions import PerfectInterventionalDistribution
 
 
 class SampleDAG(DAG):

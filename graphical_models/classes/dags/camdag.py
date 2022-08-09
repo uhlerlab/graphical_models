@@ -1,8 +1,17 @@
-from .dag import DAG
-import numpy as np
-from graphical_models.utils import core_utils
+# === IMPORTS: BUILT-IN ===
 from typing import Callable, Dict, Hashable, Optional
+
+# === IMPORTS: THIRD-PARTY ===
+import numpy as np
 from tqdm import tqdm
+
+# === IMPORTS: LOCAL ===
+from graphical_models.utils import core_utils
+from .dag import DAG
+
+# === IMPORTS: BUILT-IN ===
+# === IMPORTS: THIRD-PARTY ===
+# === IMPORTS: LOCAL ===
 
 
 class CamDAG(DAG):
@@ -65,7 +74,11 @@ class CamDAG(DAG):
                 direct_effects[:, ix] = None
         return direct_effects
 
-
+    def predict_from_parents(self, node, parent_vals):
+        raise NotImplementedError
+    
+    def log_probability(self, samples):
+        raise NotImplementedError
 
 
 
