@@ -359,6 +359,14 @@ class GaussDAG(DAG):
         self._ensure_correlation()
         return self._correlation
 
+    def marginal_precision(self, nodes: list):
+        p = self.precision
+        comp = [node for node in self.nodes if node not in nodes]
+        A = p[np.ix_(nodes, nodes)]
+        B = p[np.ix_(nodes, comp)]
+        C = p[np.ix_(comp, comp)]
+        return A - B @ inv(C) @ B.T
+
     def partial_correlation(self, i, j, cond_set):
         """
         Return the partial correlation of i and j conditioned on `cond_set`.
