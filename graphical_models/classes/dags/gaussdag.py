@@ -348,6 +348,14 @@ class GaussDAG(DAG):
     def covariance(self):
         self._ensure_covariance()
         return self._covariance.copy()
+    
+    def marginal_precision(self, nodes: list):
+        p = self.precision
+        comp = [node for node in self.nodes if node not in nodes]
+        A = p[np.ix_(nodes, nodes)]
+        B = p[np.ix_(nodes, comp)]
+        C = p[np.ix_(comp, comp)]
+        return A - B @ inv(C) @ B.T
 
     def _ensure_correlation(self):
         if self._correlation is None:
