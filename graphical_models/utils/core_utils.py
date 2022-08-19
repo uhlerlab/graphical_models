@@ -2,7 +2,8 @@ import itertools as itr
 from numpy import abs
 from typing import Iterable, Callable, Any
 import random
-
+import networkx as nx
+from networkx.algorithms import bipartite
 
 def ix_map_from_list(l):
     return {e: i for i, e in enumerate(l)}
@@ -71,6 +72,22 @@ def random_max(d, minimize=False):
 def iszero(a, atol=1e-8):
     return abs(a) < atol
 
+'''
+Given an undirected graph H (networkx graph object), output the minimum vertex cover.
+Since H is a forest (and hence is bipartite), we can use Konig's theorem to compute the minimum vertex cover.
+However, networkx requires us to process connected components one at a time.
+Konig's theorem: In bipartite graph, size maximum matching = size of minimum vertex cover.
+'''
+def compute_minimum_vertex_cover(H):
+    assert bipartite.is_bipartite(H)
+    mvc = set()
+    for V in nx.connected_components(H):
+        cc = H.subgraph(V)
+        assert bipartite.is_bipartite(cc)
+        matching_for_cc = nx.bipartite.eppstein_matching(cc)
+        mvc_for_cc = nx.bipartite.to_vertex_cover(cc, matching_for_cc)
+        mvc.update(mvc_for_cc)
+    return mvc
 
 if __name__ == '__main__':
     res = list(powerset_predicate(set(range(10)), lambda ss: len(ss) < 4))
