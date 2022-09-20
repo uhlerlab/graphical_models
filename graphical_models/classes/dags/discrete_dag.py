@@ -110,14 +110,16 @@ class DiscreteDAG(FunctionalDAG):
 
         return samples
 
-    def sample_single_node_interventional(self, iv_node, value, nsamples):
-        samples = np.zeros((nsamples, len(self._nodes)), dtype=int)
+    def sample_interventional(self, nodes2intervention_values):
+        nsamples = list(nodes2intervention_values.values())[0].shape[0]
+        samples = np.zeros((nsamples, self.nnodes), dtype=int)
         t = self.topological_sort()
 
         for node in t:
             parents = self.node2parents[node]
-            if node == iv_node:
-                vals = [value] * nsamples
+            node_ix = self._node2ix[node]
+            if node in nodes2intervention_values:
+                samples[:, node_ix] = nodes2intervention_values[node_ix]
             else:
                 if len(parents) == 0:
                     vals = np.random.choice(
@@ -130,7 +132,7 @@ class DiscreteDAG(FunctionalDAG):
                     parent_vals = samples[:, parent_ixs]
                     dists = [self.conditionals[node][tuple(v)] for v in parent_vals]
                     vals = [np.random.choice(self.node_alphabets[node], p=d) for d in dists]
-            samples[:, self._node2ix[node]] = vals
+                samples[:, node_ix] = vals
 
         return samples
 
@@ -294,7 +296,10 @@ class DiscreteDAG(FunctionalDAG):
         return mean, variance
 
     @classmethod
-    def fit_mle(cls, dag: DAG, data, node_alphabets=None):
+    def fit(cls, dag: DAG, data, node_alphabets=None, method="mle"):
+        if method != "mle":
+            raise NotImplementedError
+        
         conditionals = dict()
         infer_node_alphabets = node_alphabets is None
         if infer_node_alphabets:

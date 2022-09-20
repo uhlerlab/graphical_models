@@ -1,6 +1,7 @@
 from unittest import TestCase
 import unittest
 import numpy as np
+import networkx as nx
 from graphical_models import DAG, AncestralGraph, CycleError
 
 
@@ -193,6 +194,58 @@ class TestDAG(TestCase):
     # def test_to_cpdag(self):
     #     pass
 
+    def test_atomic_verification(self):
+        # Windmill graph G^* from Appendix C
+        # a,b,c,d,e,f,g,h are mapped to 0,1,2,3,4,5,6,7
+        windmill = DAG(arcs={(0,1),(0,2),(0,3),(0,4),(0,5),(0,6),(1,2),(3,4),(5,6),(7,0)})
+        I = windmill.atomic_verification()
+        self.assertEqual(len(I), 4)
+        self.assertEqual(0 in I or 7 in I, True)
+        self.assertEqual(1 in I or 2 in I, True)
+        self.assertEqual(3 in I or 4 in I, True)
+        self.assertEqual(5 in I or 6 in I, True)
+        self.assertEqual(windmill.interventional_cpdag([{node} for node in I], cpdag=windmill.cpdag()).num_edges, 0)
+    
+        # Small clique on odd number of nodes.
+        small_odd_clique = nx.complete_graph(49)
+        directed_small_odd_clique = DAG.from_nx(nx.DiGraph([(u,v) for (u,v) in small_odd_clique.edges() if u < v]))
+        I = directed_small_odd_clique.atomic_verification()
+        self.assertEqual(len(I), 24)
+        self.assertEqual(directed_small_odd_clique.interventional_cpdag([{node} for node in I], cpdag=directed_small_odd_clique.cpdag()).num_edges, 0)
+   
+        # Small clique on even number of nodes.
+        small_even_clique = nx.complete_graph(50)
+        directed_small_even_clique = DAG.from_nx(nx.DiGraph([(u,v) for (u,v) in small_even_clique.edges() if u < v]))
+        I = directed_small_even_clique.atomic_verification()
+        self.assertEqual(len(I), 25)
+        self.assertEqual(directed_small_even_clique.interventional_cpdag([{node} for node in I], cpdag=directed_small_even_clique.cpdag()).num_edges, 0)
+
+        # Large clique on odd number of nodes. Can take some time.
+        large_odd_clique = nx.complete_graph(149)
+        directed_large_odd_clique = DAG.from_nx(nx.DiGraph([(u,v) for (u,v) in large_odd_clique.edges() if u < v]))
+        I = directed_large_odd_clique.atomic_verification()
+        self.assertEqual(len(I), 74)
+        self.assertEqual(directed_large_odd_clique.interventional_cpdag([{node} for node in I], cpdag=directed_large_odd_clique.cpdag()).num_edges, 0)
+   
+        # Large clique on even number of nodes. Can take some time.
+        large_even_clique = nx.complete_graph(150)
+        directed_large_even_clique = DAG.from_nx(nx.DiGraph([(u,v) for (u,v) in large_even_clique.edges() if u < v]))
+        I = directed_large_even_clique.atomic_verification()
+        self.assertEqual(len(I), 75)
+        self.assertEqual(directed_large_even_clique.interventional_cpdag([{node} for node in I], cpdag=directed_large_even_clique.cpdag()).num_edges, 0)
+   
+        # Random tree on 100 nodes: Generate random tree skeleton then BFS from vertex 0
+        tree = nx.random_tree(100)
+        directed_tree = DAG.from_nx(nx.bfs_tree(tree, 0))
+        I = directed_tree.atomic_verification()
+        self.assertEqual(I, {0})
+        self.assertEqual(directed_tree.interventional_cpdag([{node} for node in I], cpdag=directed_tree.cpdag()).num_edges, 0)
+    
+        # Random graph with tree skeleton on 100 nodes
+        tree = nx.random_tree(100)
+        tree_skel = DAG.from_nx(nx.DiGraph([(u,v) for (u,v) in tree.edges() if u < v]))
+        I = tree_skel.atomic_verification()
+        self.assertEqual(tree_skel.interventional_cpdag([{node} for node in I], cpdag=tree_skel.cpdag()).num_edges, 0)
 
 if __name__ == '__main__':
     unittest.main()

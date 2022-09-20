@@ -367,6 +367,14 @@ class GaussDAG(DAG):
         self._ensure_correlation()
         return self._correlation
 
+    def marginal_precision(self, nodes: list):
+        p = self.precision
+        comp = [node for node in self.nodes if node not in nodes]
+        A = p[np.ix_(nodes, nodes)]
+        B = p[np.ix_(nodes, comp)]
+        C = p[np.ix_(comp, comp)]
+        return A - B @ inv(C) @ B.T
+
     def partial_correlation(self, i, j, cond_set):
         """
         Return the partial correlation of i and j conditioned on `cond_set`.
@@ -720,6 +728,15 @@ class GaussDAG(DAG):
         new_biases = [self._biases[node] if node not in interventions else interventions[node][0] for node in self._nodes]
         new_variances = [self._variances[node] if node not in interventions else interventions[node][1] for node in self._nodes]
         return GaussDAG(nodes=self._nodes, arcs=remaining_arcs, biases=new_biases, variances=new_variances)
+
+    def soft_interventional_dag(self, interventions: Dict[Any, Tuple[float, float, np.ndarray]]):
+        new_arcs = {
+            (i, j): (w if j not in interventions else interventions[j][i]) 
+            for (i, j), w in self.arc_weights.items()
+        }
+        new_biases = [self._biases[node] if node not in interventions else interventions[node][0] for node in self._nodes]
+        new_variances = [self._variances[node] if node not in interventions else interventions[node][1] for node in self._nodes]
+        return GaussDAG(nodes=self._nodes, arcs=new_arcs, biases=new_biases, variances=new_variances)
 
     # def logpdf(self, samples: np.array, interventions: Intervention = None) -> np.array:
     #     self._ensure_covariance()

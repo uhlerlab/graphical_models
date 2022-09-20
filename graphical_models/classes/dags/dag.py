@@ -2668,6 +2668,62 @@ class DAG:
         return g
 
     # === INTERVENTION DESIGN
+    def compute_covered_edges(self):
+        """
+        Returns the set of edges that are covered edges.
+        """
+        G = self.to_nx()
+        covered_edges = []
+        for u,v in G.edges:
+            u_parents = set(G.predecessors(u))
+            v_parents = set(G.predecessors(v))
+            v_parents.remove(u)
+            if u_parents == v_parents:
+                covered_edges.append((u,v))
+        return set(covered_edges)
+
+    def atomic_verification(self, cpdag=None, verbose=False) -> Set[Node]:
+        """
+        Returns the smallest set of interventions which fully orients the CPDAG into this DAG.
+
+        Parameters
+        ----------
+        cpdag
+            the starting CPDAG containing known orientations. If None, compute and use the observational essential graph.
+        verbose:
+            TODO: describe.
+
+        Returns
+        -------
+        atomic_interventions
+            A minimum-sized set of atomic interventions which fully orients the DAG.
+
+        Examples
+        --------
+        >>> from graphical_models import DAG
+        >>> import itertools as itr
+        >>> d = DAG(arcs=set(itr.combinations(range(5), 2)))
+        >>> atomic_verifying_set = d.atomic_verification()
+        >>> atomic_verifying_set
+        {1, 3}
+        """
+        cpdag = self.cpdag() if cpdag is None else cpdag
+
+        # Compute covered edges
+        covered_edges = self.compute_covered_edges()
+
+        # Remove oriented covered edges
+        covered_edges.difference(cpdag.arcs)
+
+        # Define H as the subgraph induced by the covered edges
+        H = nx.Graph()
+        H.add_edges_from(covered_edges)
+
+        # Compute minimum vertex cover on H
+        mvc = core_utils.compute_minimum_vertex_cover(H)
+
+        return mvc
+
     def optimal_fully_orienting_single_node_interventions(self, cpdag=None, new=False, verbose=False) -> Set[Node]:
         """
         Find the smallest set of interventions which fully orients the CPDAG into this DAG.
