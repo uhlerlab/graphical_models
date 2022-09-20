@@ -721,6 +721,15 @@ class GaussDAG(DAG):
         new_variances = [self._variances[node] if node not in interventions else interventions[node][1] for node in self._nodes]
         return GaussDAG(nodes=self._nodes, arcs=remaining_arcs, biases=new_biases, variances=new_variances)
 
+    def soft_interventional_dag(self, interventions: Dict[Any, Tuple[float, float, np.ndarray]]):
+        new_arcs = {
+            (i, j): (w if j not in interventions else interventions[j][i]) 
+            for (i, j), w in self.arc_weights.items()
+        }
+        new_biases = [self._biases[node] if node not in interventions else interventions[node][0] for node in self._nodes]
+        new_variances = [self._variances[node] if node not in interventions else interventions[node][1] for node in self._nodes]
+        return GaussDAG(nodes=self._nodes, arcs=new_arcs, biases=new_biases, variances=new_variances)
+
     # def logpdf(self, samples: np.array, interventions: Intervention = None) -> np.array:
     #     self._ensure_covariance()
     #
