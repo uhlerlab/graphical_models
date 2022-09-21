@@ -30,9 +30,19 @@ def repeat_dimensions(tensor, curr_dims, new_dims, dim_sizes, add_new=True):
     return new_tensor
 
 
-def get_conditional(data, node, vals, parent_ixs, parent_alphabets):
+def get_conditional(
+    data: np.ndarray, 
+    node: int, 
+    vals, 
+    parent_ixs: list, 
+    parent_alphabets,
+    add_one=False
+):
     if len(parent_ixs) == 0:
-        return np.array([(data[:, node] == val).mean() for val in vals])
+        counts = np.array([np.sum(data[:, node] == val) for val in vals])
+        if add_one:
+            counts += 1
+        return counts / counts.sum()
     else:
         nvals = len(vals)
         conditional = np.ones(list(map(len, parent_alphabets)) + [nvals]) * 1/nvals
@@ -40,7 +50,7 @@ def get_conditional(data, node, vals, parent_ixs, parent_alphabets):
             ixs = (data[:, parent_ixs] == parent_vals).all(axis=1)
             subdata = data[ixs, :]
             if subdata.shape[0] > 0:
-                conditional[tuple(parent_vals)] = get_conditional(subdata, node, vals, [], [])
+                conditional[tuple(parent_vals)] = get_conditional(subdata, node, vals, [], [], add_one=add_one)
         return conditional
 
 
@@ -81,6 +91,9 @@ class DiscreteDAG(FunctionalDAG):
         }
         self._node_list = list(nodes)
         self._node2ix = core_utils.ix_map_from_list(self._node_list)
+        
+    def copy(self):
+        return deepcopy(self)
 
     def set_conditional(self, node, cpt):
         self.conditionals[node] = cpt
@@ -295,19 +308,19 @@ class DiscreteDAG(FunctionalDAG):
         variance = sum(terms)
         return mean, variance
 
-    @classmethod
-    def fit(cls, dag: DAG, data, node_alphabets=None, method="mle"):
-        if method != "mle":
+    def fit(self, data, node_alphabets=None, method="mle"):
+        if method != "mle" and method != "add_one_mle":
             raise NotImplementedError
+        add_one = method == "add_one_mle"
         
         conditionals = dict()
         infer_node_alphabets = node_alphabets is None
         if infer_node_alphabets:
             node_alphabets = dict()
-        nodes = dag.topological_sort()
+        nodes = self.topological_sort()
         node2parents = dict()
         for node in nodes:
-            parents = list(dag.parents_of(node))
+            parents = list(self.parents_of(node))
             node2parents[node] = parents
             if infer_node_alphabets:
                 alphabet = list(range(max(data[:, node]) + 1))
@@ -316,18 +329,19 @@ class DiscreteDAG(FunctionalDAG):
                 alphabet = node_alphabets[node]
             
             if len(parents) == 0:
-                conditionals[node] = get_conditional(data, node, alphabet, [], [])
+                conditionals[node] = get_conditional(data, node, alphabet, [], [], add_one=add_one)
             else:
                 parent_alphabets = [node_alphabets[p] for p in parents]
-                conditionals[node] = get_conditional(data, node, alphabet, parents, parent_alphabets)
+                conditionals[node] = get_conditional(data, node, alphabet, parents, parent_alphabets, add_one=add_one)
         
-        return DiscreteDAG(
-            nodes,
-            dag.arcs,
-            conditionals=conditionals,
-            node2parents=node2parents,
-            node_alphabets=node_alphabets
-        )
+        self.conditionals = conditionals
+        # return DiscreteDAG(
+        #     nodes,
+        #     self.arcs,
+        #     conditionals=conditionals,
+        #     node2parents=node2parents,
+        #     node_alphabets=node_alphabets
+        # )
 
     def get_efficient_influence_function_conditionals(self, target_ix, cond_ix, cond_value):
         # ADD TERMS FROM THE EFFICIENT INFLUENCE FUNCTION
@@ -372,7 +386,6 @@ class DiscreteDAG(FunctionalDAG):
                     ixs = samples[:, cond_set]
                     eif_terms[:, ix] = conditional_mean[tuple(ixs.T)] * count
             eif = np.sum(eif_terms, axis=1)
-            breakpoint()
             return eif / propensity
 
         return efficient_influence_function

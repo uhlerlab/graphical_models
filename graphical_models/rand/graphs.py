@@ -186,8 +186,31 @@ def rand_discrete_dag(dag, node_alphabets=None, alpha=1.0):
         node_alphabets=node_alphabets
     )
 
+    return dag
 
-        
+
+def rand_noisy_or_dag(dag, node_alphabets=None):
+    if node_alphabets is None:
+        node_alphabets = {node: list(range(3)) for node in dag.nodes}
+    
+    conditionals = dict()
+    node2parents = dict()
+    for node in dag.nodes:
+        parents = list(dag.parents_of(node))
+        node2parents[node] = parents
+        K = len(node_alphabets[node])
+
+        breakpoint()
+        conditionals[node] = None
+    
+    dag = DiscreteDAG(
+        nodes=list(range(dag.nnodes)), 
+        arcs=dag.arcs,
+        conditionals=conditionals,
+        node2parents=node2parents,
+        node_alphabets=node_alphabets
+    )
+
     return dag
 
 
