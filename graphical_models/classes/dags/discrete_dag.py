@@ -158,7 +158,7 @@ class DiscreteDAG(FunctionalDAG):
     def get_hard_interventional_dag(self, target_node, value):
         assert len(self.parents_of(target_node)) == 0
         node_alphabet = self.node_alphabets[target_node]
-        target_conditional = np.array([0 if v == value else 1 for v in node_alphabet])
+        target_conditional = np.array([1 if v == value else 0 for v in node_alphabet])
         new_conditionals = {
             node: self.conditionals[node] if node != target_node else target_conditional
             for node in self.nodes  

@@ -189,26 +189,40 @@ def rand_discrete_dag(dag, node_alphabets=None, alpha=1.0):
     return dag
 
 
-def rand_noisy_or_dag(dag, node_alphabets=None):
-    if node_alphabets is None:
-        node_alphabets = {node: list(range(3)) for node in dag.nodes}
-    
+def tensor_product(vecs):
+    current_prod = vecs[0]
+    for i in range(1, len(vecs)):
+        new_vec = vecs[i]
+        current_prod = np.tensordot(current_prod, new_vec, axes=0)
+    return current_prod
+
+
+def rand_noisy_or_dag(dag):
     conditionals = dict()
     node2parents = dict()
     for node in dag.nodes:
         parents = list(dag.parents_of(node))
         node2parents[node] = parents
-        K = len(node_alphabets[node])
+        
+        q_j = np.random.uniform(0.75, 1)
+        # q_j = 1
+        if len(parents) > 0:
+            parent_params = np.random.uniform(0, 1, size=len(parents))
+            vecs = np.vstack((np.ones(len(parents)), parent_params)).T
+            prob0 = tensor_product(vecs) * q_j
+            conditional = np.stack((prob0, 1 - prob0), axis=-1)
+        else:
+            prob0 = np.random.uniform(0, 1) * q_j
+            conditional = np.array([prob0, 1 - prob0])
 
-        breakpoint()
-        conditionals[node] = None
+        conditionals[node] = conditional
     
     dag = DiscreteDAG(
         nodes=list(range(dag.nnodes)), 
         arcs=dag.arcs,
         conditionals=conditionals,
         node2parents=node2parents,
-        node_alphabets=node_alphabets
+        node_alphabets={i: [0, 1] for i in range(dag.nnodes)}
     )
 
     return dag
@@ -519,7 +533,8 @@ __all__ = [
     'alter_weights',
     'rand_additive_basis',
     'rand_normal_wishart',
-    'rand_discrete_dag'
+    'rand_discrete_dag',
+    'rand_noisy_or_dag'
 ]
 
 
