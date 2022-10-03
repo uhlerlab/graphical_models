@@ -8,6 +8,7 @@ from collections import defaultdict
 
 # === THIRD-PARTY
 import numpy as np
+import xgboost as xgb
 from tqdm import tqdm
 from einops import repeat
 from scipy.special import logsumexp
@@ -28,6 +29,17 @@ def repeat_dimensions(tensor, curr_dims, new_dims, dim_sizes, add_new=True):
     repeats = {f"d{ix}": dim_sizes[ix] for ix in new_dims if ix not in curr_dims}
     new_tensor = repeat(tensor, repeat_pattern, **repeats)
     return new_tensor
+
+
+def extract_conditional(model, alphabets):
+    vals = np.array(list(itr.product(*alphabets)))
+    probs = model.predict_proba(vals)
+    
+    nvals = probs.shape[1]
+    shape = list(map(len, alphabets)) + [nvals]
+    conditional = probs.reshape(shape)
+    
+    return conditional
 
 
 def get_conditional(
@@ -309,39 +321,50 @@ class DiscreteDAG(FunctionalDAG):
         return mean, variance
 
     def fit(self, data, node_alphabets=None, method="mle"):
-        if method != "mle" and method != "add_one_mle":
+        if method != "mle" and method != "add_one_mle" and method != "xgboost":
             raise NotImplementedError
-        add_one = method == "add_one_mle"
         
-        conditionals = dict()
-        infer_node_alphabets = node_alphabets is None
-        if infer_node_alphabets:
+        if node_alphabets is None:
             node_alphabets = dict()
-        nodes = self.topological_sort()
-        node2parents = dict()
-        for node in nodes:
-            parents = list(self.parents_of(node))
-            node2parents[node] = parents
-            if infer_node_alphabets:
+            for node in self.nodes:
                 alphabet = list(range(max(data[:, node]) + 1))
                 node_alphabets[node] = alphabet
-            else:
-                alphabet = node_alphabets[node]
-            
-            if len(parents) == 0:
-                conditionals[node] = get_conditional(data, node, alphabet, [], [], add_one=add_one)
-            else:
-                parent_alphabets = [node_alphabets[p] for p in parents]
-                conditionals[node] = get_conditional(data, node, alphabet, parents, parent_alphabets, add_one=add_one)
         
-        self.conditionals = conditionals
-        # return DiscreteDAG(
-        #     nodes,
-        #     self.arcs,
-        #     conditionals=conditionals,
-        #     node2parents=node2parents,
-        #     node_alphabets=node_alphabets
-        # )
+        if method == "xgboost":
+            conditionals = dict()
+            nodes = self.topological_sort()
+            for node in nodes:
+                parents = list(self.parents_of(node))
+                alphabet = node_alphabets[node]
+                conditionals[node] = get_conditional(data, node, alphabet, [], [], add_one=False)
+                if len(parents) == 0:
+                    pass
+                else:
+                    model = xgb.XGBClassifier()
+                    model.fit(data[:, parents], data[:, node])
+                    parent_alphabets = [node_alphabets[p] for p in parents]
+                    conditionals[node] = extract_conditional(model, parent_alphabets)
+            
+            self.conditionals = conditionals
+        else:
+            add_one = method == "add_one_mle"
+            
+            conditionals = dict()
+            infer_node_alphabets = node_alphabets is None
+            if infer_node_alphabets:
+                node_alphabets = dict()
+            nodes = self.topological_sort()
+            for node in nodes:
+                parents = list(self.parents_of(node))
+                alphabet = node_alphabets[node]
+                
+                if len(parents) == 0:
+                    conditionals[node] = get_conditional(data, node, alphabet, [], [], add_one=add_one)
+                else:
+                    parent_alphabets = [node_alphabets[p] for p in parents]
+                    conditionals[node] = get_conditional(data, node, alphabet, parents, parent_alphabets, add_one=add_one)
+            
+            self.conditionals = conditionals
 
     def get_efficient_influence_function_conditionals(
         self, 

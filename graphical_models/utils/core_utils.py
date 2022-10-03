@@ -19,6 +19,20 @@ def get_extended_cov(
     return extended_samples.T @ extended_samples
 
 
+def get_extended_cov2(
+    cov,
+    mean,
+    n: int
+):
+    p = len(mean)
+    extended_cov = np.zeros((p+1, p+1))
+    extended_cov[-1, -1] = n
+    extended_cov[-1, :-1] = mean * n
+    extended_cov[:-1, -1] = mean * n
+    extended_cov[:-1, :-1] = cov * (n - 1) + np.outer(mean, mean) * n
+    return extended_cov
+
+
 def linear_regression_mle(
     extended_cov: np.ndarray,
     input_ixs: list, 
