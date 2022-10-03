@@ -197,19 +197,20 @@ def tensor_product(vecs):
     return current_prod
 
 
-def rand_noisy_or_dag(dag):
+def rand_noisy_or_dag(dag, q_low=0.75, q_high=1.0, p_low=0.5, p_high=1.0):
     conditionals = dict()
     node2parents = dict()
     for node in dag.nodes:
         parents = list(dag.parents_of(node))
         node2parents[node] = parents
         
-        q_j = np.random.uniform(0.75, 1)
+        q_j = np.random.uniform(q_low, q_high)
         # q_j = 1
         if len(parents) > 0:
-            parent_params = np.random.uniform(0, 1, size=len(parents))
+            parent_params = np.random.uniform(p_low, p_high, size=len(parents))
             vecs = np.vstack((np.ones(len(parents)), parent_params)).T
-            prob0 = tensor_product(vecs) * q_j
+            prob0 = tensor_product(vecs)
+            prob0 = prob0 * q_j
             conditional = np.stack((prob0, 1 - prob0), axis=-1)
         else:
             prob0 = np.random.uniform(0, 1) * q_j

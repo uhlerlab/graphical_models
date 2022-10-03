@@ -343,9 +343,15 @@ class DiscreteDAG(FunctionalDAG):
         #     node_alphabets=node_alphabets
         # )
 
-    def get_efficient_influence_function_conditionals(self, target_ix, cond_ix, cond_value):
+    def get_efficient_influence_function_conditionals(
+        self, 
+        target_ix: int, 
+        cond_ix: int, 
+        cond_value: int,
+        ignored_nodes = set()
+    ):
         # ADD TERMS FROM THE EFFICIENT INFLUENCE FUNCTION
-        conds2counts = self.get_standard_imset()
+        conds2counts = self.get_standard_imset(ignored_nodes=ignored_nodes)
         
         target_values = self.node_alphabets[target_ix]
         indicator = np.array(self.node_alphabets[cond_ix]) == cond_value
@@ -365,14 +371,22 @@ class DiscreteDAG(FunctionalDAG):
         
         return conds2counts, conds2means
     
-    def get_efficient_influence_function(self, target_ix, cond_ix, cond_value, propensity=None):
+    def get_efficient_influence_function(
+        self, 
+        target_ix: int, 
+        cond_ix: int, 
+        cond_value: int, 
+        propensity = None,
+        ignored_nodes = set()
+    ):
         if propensity is None:
             propensity = self.get_marginal(cond_ix)[cond_value]
 
         conds2counts, conds2means = self.get_efficient_influence_function_conditionals(
             target_ix,
             cond_ix,
-            cond_value
+            cond_value,
+            ignored_nodes=ignored_nodes
         )
         
         def efficient_influence_function(samples):
