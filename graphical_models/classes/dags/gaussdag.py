@@ -13,6 +13,7 @@ from numpy import sqrt, diag
 from numpy.linalg import inv, lstsq
 from scipy.linalg import cholesky
 from scipy.stats import norm
+from sklearn.linear_model import LinearRegression
 
 # === IMPORTS: LOCAL ===
 from .dag import DAG
@@ -116,20 +117,20 @@ class GaussDAG(DAG):
 
     @classmethod
     def fit_mle(cls, dag, samples):
-        n, p = samples.shape
-        extended_samples = np.hstack((samples, np.ones((n, 1))))
-        cov = np.cov(extended_samples, rowvar=False)
+        lr = LinearRegression()
+        p = samples.shape[1]
+        extended_cov = core_utils.get_extended_cov(samples)
+        
         amat = np.zeros((p, p))
         biases = np.zeros(p)
         variances = np.zeros(p)
         for node in dag.nodes:
-            parents = list(dag.parents_of(node)) + [p]
-            coefs, _, _, _ = lstsq(cov[np.ix_(parents, parents)], cov[parents, node])
-            bias = coefs[-1]
-            variance = cov[node, node] - coefs.T @ cov[np.ix_(parents, parents)] @ coefs
-            amat[parents[:-1], node] = coefs[:-1]
+            parents = list(dag.parents_of(node))
+            coefs, bias, variance = core_utils.linear_regression_mle(extended_cov, parents, node)
+            amat[parents, node] = coefs
             biases[node] = bias
             variances[node] = variance
+            
         return GaussDAG.from_amat(
             amat,
             biases=biases,
