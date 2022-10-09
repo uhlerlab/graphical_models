@@ -341,8 +341,10 @@ class DiscreteDAG(FunctionalDAG):
                     pass
                 else:
                     model = xgb.XGBClassifier()
+                    print("Fitting")
                     model.fit(data[:, parents], data[:, node])
                     parent_alphabets = [node_alphabets[p] for p in parents]
+                    print("Extracting")
                     conditionals[node] = extract_conditional(model, parent_alphabets)
             
             self.conditionals = conditionals
