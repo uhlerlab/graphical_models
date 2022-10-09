@@ -12,6 +12,7 @@ import xgboost as xgb
 from tqdm import tqdm
 from einops import repeat
 from scipy.special import logsumexp
+from pgmpy.models import BayesianNetwork
 
 # === LOCAL
 from graphical_models.utils import core_utils
@@ -319,6 +320,48 @@ class DiscreteDAG(FunctionalDAG):
         terms = [(val - mean)**2 * marg for val, marg in zip(alphabet, marginal)]
         variance = sum(terms)
         return mean, variance
+
+    @classmethod
+    def from_pgm(cls, model: BayesianNetwork):
+        node_order = list(model.nodes)
+        ixs2labels = dict(enumerate(node_order))
+        labels2ixs = {label: ix for ix, label in ixs2labels.items()}
+
+        arcs = set()
+        conditionals = dict()
+        node2parents = dict()
+        node_alphabets = dict()
+        values2nums = dict()
+        for node_ix, node in ixs2labels.items():
+            cpd = model.get_cpds(node)
+
+            # === SAVE PARENT ORDER ===
+            parents = model.get_parents(node)
+            parent_ixs = [labels2ixs[parent] for parent in parents]
+            node2parents[node_ix] = parent_ixs
+
+            # === ADD ARCS FROM PARENTS TO NODE ===
+            arcs |= {(parent_ix, node_ix) for parent_ix in parent_ixs}
+
+            # === CONVERT CPD SO THAT `node` IS THE LAST DIMENSION ===
+            vals = cpd.values
+            nparents = len(vals.shape) - 1
+            new_shape = list(range(1, nparents+1)) + [0]
+            conditionals[node_ix] = vals.transpose(new_shape)
+
+            # === SAVE THIS NODE'S ALPHABET ===
+            node_alphabets[node_ix] = list(range(vals.shape[0]))
+
+            values2nums[node] = cpd.name_to_no[node]
+
+        dag = DiscreteDAG(
+            list(range(len(model.nodes))), 
+            arcs=arcs, 
+            conditionals=conditionals,
+            node2parents=node2parents,
+            node_alphabets=node_alphabets
+        )
+        return dag, node_order, values2nums
 
     def fit(self, data, node_alphabets=None, method="mle"):
         if method != "mle" and method != "add_one_mle" and method != "xgboost":
