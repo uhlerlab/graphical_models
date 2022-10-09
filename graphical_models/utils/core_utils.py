@@ -1,9 +1,52 @@
-import itertools as itr
-from numpy import abs
-from typing import Iterable, Callable, Any
+# === IMPORTS: BUILT-IN ===
 import random
+import itertools as itr
+from typing import Iterable, Callable, Any
+
+# === IMPORTS: THIRD-PARTY ===
+import numpy as np
 import networkx as nx
+from numpy import abs
+from numpy.linalg import inv, lstsq
 from networkx.algorithms import bipartite
+
+
+def get_extended_cov(
+    samples: np.ndarray
+):
+    n = samples.shape[0]
+    extended_samples = np.hstack((samples, np.ones((n, 1))))
+    return extended_samples.T @ extended_samples
+
+
+def get_extended_cov2(
+    cov,
+    mean,
+    n: int
+):
+    p = len(mean)
+    extended_cov = np.zeros((p+1, p+1))
+    extended_cov[-1, -1] = n
+    extended_cov[-1, :-1] = mean * n
+    extended_cov[:-1, -1] = mean * n
+    extended_cov[:-1, :-1] = cov * (n - 1) + np.outer(mean, mean) * n
+    return extended_cov
+
+
+def linear_regression_mle(
+    extended_cov: np.ndarray,
+    input_ixs: list, 
+    output_ixs: int
+):
+    C = extended_cov
+    p = extended_cov.shape[0] - 1
+    ii = input_ixs + [p]
+    coefs, _, _, _ = lstsq(C[np.ix_(ii, ii)], C[ii, output_ixs], rcond=None)
+    bias = coefs[-1]
+    variance = C[output_ixs, output_ixs] - coefs.T @ C[np.ix_(ii, ii)] @ coefs
+    
+    return coefs[:-1], bias, variance
+
 
 def ix_map_from_list(l):
     return {e: i for i, e in enumerate(l)}

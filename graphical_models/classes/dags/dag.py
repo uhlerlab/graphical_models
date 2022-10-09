@@ -1215,9 +1215,9 @@ class DAG:
         """
         return len(self.skeleton.symmetric_difference(other.skeleton))
 
-    def get_standard_imset(self):
+    def get_standard_imset(self, ignored_nodes=set()):
         conds2counts = defaultdict(int)
-        for node in self.nodes:
+        for node in self.nodes - ignored_nodes:
             parents = frozenset(self.parents_of(node))
             parents_and_node = parents | {node}
             conds2counts[parents_and_node] += 1

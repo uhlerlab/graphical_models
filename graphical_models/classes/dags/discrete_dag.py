@@ -8,6 +8,7 @@ from collections import defaultdict
 
 # === THIRD-PARTY
 import numpy as np
+import xgboost as xgb
 from tqdm import tqdm
 from einops import repeat
 from scipy.special import logsumexp
@@ -31,9 +32,30 @@ def repeat_dimensions(tensor, curr_dims, new_dims, dim_sizes, add_new=True):
     return new_tensor
 
 
-def get_conditional(data, node, vals, parent_ixs, parent_alphabets):
+def extract_conditional(model, alphabets):
+    vals = np.array(list(itr.product(*alphabets)))
+    probs = model.predict_proba(vals)
+    
+    nvals = probs.shape[1]
+    shape = list(map(len, alphabets)) + [nvals]
+    conditional = probs.reshape(shape)
+    
+    return conditional
+
+
+def get_conditional(
+    data: np.ndarray, 
+    node: int, 
+    vals, 
+    parent_ixs: list, 
+    parent_alphabets,
+    add_one=False
+):
     if len(parent_ixs) == 0:
-        return np.array([(data[:, node] == val).mean() for val in vals])
+        counts = np.array([np.sum(data[:, node] == val) for val in vals])
+        if add_one:
+            counts += 1
+        return counts / counts.sum()
     else:
         nvals = len(vals)
         conditional = np.ones(list(map(len, parent_alphabets)) + [nvals]) * 1/nvals
@@ -41,7 +63,7 @@ def get_conditional(data, node, vals, parent_ixs, parent_alphabets):
             ixs = (data[:, parent_ixs] == parent_vals).all(axis=1)
             subdata = data[ixs, :]
             if subdata.shape[0] > 0:
-                conditional[tuple(parent_vals)] = get_conditional(subdata, node, vals, [], [])
+                conditional[tuple(parent_vals)] = get_conditional(subdata, node, vals, [], [], add_one=add_one)
         return conditional
 
 
@@ -82,6 +104,9 @@ class DiscreteDAG(FunctionalDAG):
         }
         self._node_list = list(nodes)
         self._node2ix = core_utils.ix_map_from_list(self._node_list)
+        
+    def copy(self):
+        return deepcopy(self)
 
     def set_conditional(self, node, cpt):
         self.conditionals[node] = cpt
@@ -146,7 +171,7 @@ class DiscreteDAG(FunctionalDAG):
     def get_hard_interventional_dag(self, target_node, value):
         assert len(self.parents_of(target_node)) == 0
         node_alphabet = self.node_alphabets[target_node]
-        target_conditional = np.array([0 if v == value else 1 for v in node_alphabet])
+        target_conditional = np.array([1 if v == value else 0 for v in node_alphabet])
         new_conditionals = {
             node: self.conditionals[node] if node != target_node else target_conditional
             for node in self.nodes  
@@ -338,43 +363,61 @@ class DiscreteDAG(FunctionalDAG):
         )
         return dag, node_order, values2nums
 
-    @classmethod
-    def fit(cls, dag: DAG, data, node_alphabets=None, method="mle"):
-        if method != "mle":
+    def fit(self, data, node_alphabets=None, method="mle"):
+        if method != "mle" and method != "add_one_mle" and method != "xgboost":
             raise NotImplementedError
         
-        conditionals = dict()
-        infer_node_alphabets = node_alphabets is None
-        if infer_node_alphabets:
+        if node_alphabets is None:
             node_alphabets = dict()
-        nodes = dag.topological_sort()
-        node2parents = dict()
-        for node in nodes:
-            parents = list(dag.parents_of(node))
-            node2parents[node] = parents
-            if infer_node_alphabets:
+            for node in self.nodes:
                 alphabet = list(range(max(data[:, node]) + 1))
                 node_alphabets[node] = alphabet
-            else:
-                alphabet = node_alphabets[node]
-            
-            if len(parents) == 0:
-                conditionals[node] = get_conditional(data, node, alphabet, [], [])
-            else:
-                parent_alphabets = [node_alphabets[p] for p in parents]
-                conditionals[node] = get_conditional(data, node, alphabet, parents, parent_alphabets)
         
-        return DiscreteDAG(
-            nodes,
-            dag.arcs,
-            conditionals=conditionals,
-            node2parents=node2parents,
-            node_alphabets=node_alphabets
-        )
+        if method == "xgboost":
+            conditionals = dict()
+            nodes = self.topological_sort()
+            for node in nodes:
+                parents = list(self.parents_of(node))
+                alphabet = node_alphabets[node]
+                conditionals[node] = get_conditional(data, node, alphabet, [], [], add_one=False)
+                if len(parents) == 0:
+                    pass
+                else:
+                    model = xgb.XGBClassifier()
+                    model.fit(data[:, parents], data[:, node])
+                    parent_alphabets = [node_alphabets[p] for p in parents]
+                    conditionals[node] = extract_conditional(model, parent_alphabets)
+            
+            self.conditionals = conditionals
+        else:
+            add_one = method == "add_one_mle"
+            
+            conditionals = dict()
+            infer_node_alphabets = node_alphabets is None
+            if infer_node_alphabets:
+                node_alphabets = dict()
+            nodes = self.topological_sort()
+            for node in nodes:
+                parents = list(self.parents_of(node))
+                alphabet = node_alphabets[node]
+                
+                if len(parents) == 0:
+                    conditionals[node] = get_conditional(data, node, alphabet, [], [], add_one=add_one)
+                else:
+                    parent_alphabets = [node_alphabets[p] for p in parents]
+                    conditionals[node] = get_conditional(data, node, alphabet, parents, parent_alphabets, add_one=add_one)
+            
+            self.conditionals = conditionals
 
-    def get_efficient_influence_function_conditionals(self, target_ix, cond_ix, cond_value):
+    def get_efficient_influence_function_conditionals(
+        self, 
+        target_ix: int, 
+        cond_ix: int, 
+        cond_value: int,
+        ignored_nodes = set()
+    ):
         # ADD TERMS FROM THE EFFICIENT INFLUENCE FUNCTION
-        conds2counts = self.get_standard_imset()
+        conds2counts = self.get_standard_imset(ignored_nodes=ignored_nodes)
         
         target_values = self.node_alphabets[target_ix]
         indicator = np.array(self.node_alphabets[cond_ix]) == cond_value
@@ -394,14 +437,22 @@ class DiscreteDAG(FunctionalDAG):
         
         return conds2counts, conds2means
     
-    def get_efficient_influence_function(self, target_ix, cond_ix, cond_value, propensity=None):
+    def get_efficient_influence_function(
+        self, 
+        target_ix: int, 
+        cond_ix: int, 
+        cond_value: int, 
+        propensity = None,
+        ignored_nodes = set()
+    ):
         if propensity is None:
             propensity = self.get_marginal(cond_ix)[cond_value]
 
         conds2counts, conds2means = self.get_efficient_influence_function_conditionals(
             target_ix,
             cond_ix,
-            cond_value
+            cond_value,
+            ignored_nodes=ignored_nodes
         )
         
         def efficient_influence_function(samples):
@@ -415,7 +466,6 @@ class DiscreteDAG(FunctionalDAG):
                     ixs = samples[:, cond_set]
                     eif_terms[:, ix] = conditional_mean[tuple(ixs.T)] * count
             eif = np.sum(eif_terms, axis=1)
-            breakpoint()
             return eif / propensity
 
         return efficient_influence_function

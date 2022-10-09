@@ -186,8 +186,46 @@ def rand_discrete_dag(dag, node_alphabets=None, alpha=1.0):
         node_alphabets=node_alphabets
     )
 
+    return dag
 
+
+def tensor_product(vecs):
+    current_prod = vecs[0]
+    for i in range(1, len(vecs)):
+        new_vec = vecs[i]
+        current_prod = np.tensordot(current_prod, new_vec, axes=0)
+    return current_prod
+
+
+def rand_noisy_or_dag(dag, q_low=0.75, q_high=1.0, p_low=0.5, p_high=1.0):
+    conditionals = dict()
+    node2parents = dict()
+    for node in dag.nodes:
+        parents = list(dag.parents_of(node))
+        node2parents[node] = parents
         
+        q_j = np.random.uniform(q_low, q_high)
+        # q_j = 1
+        if len(parents) > 0:
+            parent_params = np.random.uniform(p_low, p_high, size=len(parents))
+            vecs = np.vstack((np.ones(len(parents)), parent_params)).T
+            prob0 = tensor_product(vecs)
+            prob0 = prob0 * q_j
+            conditional = np.stack((prob0, 1 - prob0), axis=-1)
+        else:
+            prob0 = np.random.uniform(0, 1) * q_j
+            conditional = np.array([prob0, 1 - prob0])
+
+        conditionals[node] = conditional
+    
+    dag = DiscreteDAG(
+        nodes=list(range(dag.nnodes)), 
+        arcs=dag.arcs,
+        conditionals=conditionals,
+        node2parents=node2parents,
+        node_alphabets={i: [0, 1] for i in range(dag.nnodes)}
+    )
+
     return dag
 
 
@@ -496,7 +534,8 @@ __all__ = [
     'alter_weights',
     'rand_additive_basis',
     'rand_normal_wishart',
-    'rand_discrete_dag'
+    'rand_discrete_dag',
+    'rand_noisy_or_dag'
 ]
 
 
