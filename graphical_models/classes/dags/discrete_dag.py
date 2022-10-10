@@ -20,7 +20,13 @@ from graphical_models.classes.dags.dag import DAG
 from graphical_models.classes.dags.functional_dag import FunctionalDAG
 
 
-def repeat_dimensions(tensor, curr_dims, new_dims, dim_sizes, add_new=True):
+def repeat_dimensions(
+    tensor, 
+    curr_dims, 
+    new_dims, 
+    dim_sizes, 
+    add_new=True
+):
     start_dims = " ".join([f"d{ix}" for ix in curr_dims])
     end_dims = " ".join([f"d{ix}" for ix in new_dims])
     if add_new:
@@ -32,14 +38,28 @@ def repeat_dimensions(tensor, curr_dims, new_dims, dim_sizes, add_new=True):
     return new_tensor
 
 
-def extract_conditional(model, alphabets):
+def extract_conditional(model, alphabets, node_alphabet):
     vals = np.array(list(itr.product(*alphabets)))
     probs = model.predict_proba(vals)
     
     nvals = probs.shape[1]
-    shape = list(map(len, alphabets)) + [nvals]
-    conditional = probs.reshape(shape)
+    parent_dims = list(map(len, alphabets))
+    conditional = probs.reshape(parent_dims + [nvals])
     
+    if nvals != len(node_alphabet):
+        conditional2 = np.zeros(parent_dims + [len(node_alphabet)])
+        conditional2[..., model.classes_] = conditional
+        return conditional2
+    
+    return conditional
+
+
+def indicator_conditional(input_alphabets, output_alphabet, value):
+    shape = list(map(len, input_alphabets)) + [len(output_alphabet)]
+    
+    conditional = np.zeros(shape)
+    ix = output_alphabet.index(value)
+    conditional[..., ix] = 1
     return conditional
 
 
@@ -67,7 +87,13 @@ def get_conditional(
         return conditional
 
 
-def add_variable(table, current_variables, conditional, node2dims, parents):
+def add_variable(
+    table, 
+    current_variables, 
+    conditional, 
+    node2dims, 
+    parents
+):
     log_conditional = np.log(conditional)
 
     log_conditional = repeat_dimensions(
@@ -104,6 +130,10 @@ class DiscreteDAG(FunctionalDAG):
         }
         self._node_list = list(nodes)
         self._node2ix = core_utils.ix_map_from_list(self._node_list)
+        
+        for node, parents in node2parents.items():
+            expected_shape = tuple([len(node_alphabets[p]) for p in parents + [node]])
+            assert conditionals[node].shape == expected_shape
         
     def copy(self):
         return deepcopy(self)
@@ -176,11 +206,15 @@ class DiscreteDAG(FunctionalDAG):
             node: self.conditionals[node] if node != target_node else target_conditional
             for node in self.nodes  
         }
+        new_node2parents = deepcopy(self.node2parents)
+        new_node2parents[target_node] = []
+        new_arcs = {(i, j) for i, j in self.arcs if j != target_node}
+        
         return DiscreteDAG(
             nodes=self.nodes,
-            arcs=self.arcs,
+            arcs=new_arcs,
             conditionals=new_conditionals,
-            node2parents=deepcopy(self.node2parents),
+            node2parents=new_node2parents,
             node_alphabets=self.node_alphabets
         )
 
@@ -377,18 +411,21 @@ class DiscreteDAG(FunctionalDAG):
             conditionals = dict()
             nodes = self.topological_sort()
             for node in nodes:
-                parents = list(self.parents_of(node))
+                parents = self.node2parents[node]
                 alphabet = node_alphabets[node]
-                conditionals[node] = get_conditional(data, node, alphabet, [], [], add_one=False)
                 if len(parents) == 0:
-                    pass
+                    conditionals[node] = get_conditional(data, node, alphabet, [], [], add_one=False)
                 else:
-                    model = xgb.XGBClassifier()
-                    print("Fitting")
-                    model.fit(data[:, parents], data[:, node])
                     parent_alphabets = [node_alphabets[p] for p in parents]
-                    print("Extracting")
-                    conditionals[node] = extract_conditional(model, parent_alphabets)
+                    node_alphabet = node_alphabets[node]
+                    if len(set(data[:, node])) == 1:
+                        cc = indicator_conditional(parent_alphabets, node_alphabet, data[0, node])
+                        conditionals[node] = cc
+                    else:
+                        model = xgb.XGBClassifier()
+                        model.classes_ = node_alphabet
+                        model.fit(data[:, parents], data[:, node])
+                        conditionals[node] = extract_conditional(model, parent_alphabets, node_alphabet)
             
             self.conditionals = conditionals
         else:
@@ -400,7 +437,7 @@ class DiscreteDAG(FunctionalDAG):
                 node_alphabets = dict()
             nodes = self.topological_sort()
             for node in nodes:
-                parents = list(self.parents_of(node))
+                parents = self.node2parents[node]
                 alphabet = node_alphabets[node]
                 
                 if len(parents) == 0:
