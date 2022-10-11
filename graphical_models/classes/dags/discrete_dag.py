@@ -13,11 +13,50 @@ from tqdm import tqdm
 from einops import repeat
 from scipy.special import logsumexp
 from pgmpy.models import BayesianNetwork
+from pgmpy.factors.discrete.CPD import TabularCPD
+from pgmpy.inference import VariableElimination, BeliefPropagation
+from sklearn.ensemble import RandomForestClassifier
 
 # === LOCAL
 from graphical_models.utils import core_utils
 from graphical_models.classes.dags.dag import DAG
 from graphical_models.classes.dags.functional_dag import FunctionalDAG
+
+
+def add_repeated_nodes_conditional(
+    conditional: np.ndarray, 
+    marginal_nodes: list, 
+    cond_nodes: list,
+    node2dims: dict
+):
+    marginal_nodes_no_repeats = [node for node in marginal_nodes if node not in cond_nodes]
+    all_nodes = marginal_nodes_no_repeats + cond_nodes
+    marginal_nodes_repeat = [node for node in marginal_nodes if node in cond_nodes]
+    
+    # === SET UP PATTERNS FOR START AND END DIMENSION
+    start_dims = " ".join([f"d{ix}" for ix in all_nodes])
+    end_dims = " ".join([
+        f"d{node}" if node in marginal_nodes_no_repeats else f"r{node}" 
+        for node in marginal_nodes
+    ])
+    end_dims += " " + " ".join([f"d{node}" for node in cond_nodes])
+    
+    # === FOR EACH MARGINAL NODE THAT'S IN THE CONDITIONING SET, REPEAT
+    pattern = start_dims + " -> " + end_dims
+    repeats = {f"r{node}": node2dims[node] for node in marginal_nodes_repeat}
+    conditional = repeat(conditional, pattern, **repeats)
+
+    ones = [np.eye(node2dims[node]) for node in marginal_nodes_repeat]
+    if len(ones) > 1:
+        raise NotImplementedError
+    else:
+        ones = ones[0]
+        rep_node = marginal_nodes_repeat[0]
+        repeats = {f"d{node}": node2dims[node] for node in all_nodes if node != rep_node}
+        ones = repeat(ones, f"d{rep_node} r{rep_node} -> {end_dims}", **repeats)
+    conditional = conditional * ones
+    
+    return conditional
 
 
 def repeat_dimensions(
@@ -100,11 +139,11 @@ def add_variable(
         log_conditional,
         parents,
         current_variables,
-        node2dims
+        node2dims,
     )
     
-    table = table.reshape(table.shape + (1, )) + log_conditional
-    return table
+    new_table = table.reshape(table.shape + (1, )) + log_conditional
+    return new_table
 
 
 def marginalize(table, ixs):
@@ -217,6 +256,42 @@ class DiscreteDAG(FunctionalDAG):
             node2parents=new_node2parents,
             node_alphabets=self.node_alphabets
         )
+        
+    def get_marginals_new(self, marginal_nodes: List[Hashable], log=False):
+        ancestor_subgraph = self.ancestral_subgraph(set(marginal_nodes))
+        elimination_ordering = ancestor_subgraph.topological_sort()
+        node0 = elimination_ordering[0]
+        current_nodes = [node0]
+        log_table = np.log(self.conditionals[node0])
+        
+        for elim_node in elimination_ordering:
+            # === ADD FACTORS INVOLVING THIS NODE
+            new_children = list(ancestor_subgraph.children_of(elim_node) - set(current_nodes))
+            
+            for child in new_children:
+                remaining_parents = [p for p in self.node2parents[child] if p in current_nodes]
+                log_table = add_variable(
+                    log_table,
+                    current_nodes,
+                    self.conditionals[child],
+                    self.node2dims,
+                    remaining_parents,
+                )
+                print(child, self.conditionals[child].shape)
+                current_nodes.append(child)
+                
+            # === ELIMINATE THE CURRENT NODE
+            if elim_node not in marginal_nodes:
+                ix = current_nodes.index(elim_node)
+                log_table = marginalize(log_table, [ix])
+                current_nodes = [node for node in current_nodes if node != elim_node]
+            
+        if not log:
+            table = np.exp(log_table)
+        else:
+            table = log_table
+        
+        return repeat_dimensions(table, current_nodes, marginal_nodes, None, add_new=False)
 
     def get_marginals(self, marginal_nodes: List[Hashable], log=False):
         ancestor_subgraph = self.ancestral_subgraph(set(marginal_nodes))
@@ -298,13 +373,50 @@ class DiscreteDAG(FunctionalDAG):
             if verbose: print(f"Shape: {table.shape}")
                 
         return np.exp(table)
+    
+    def get_conditional_pgmpy(self, marginal_nodes, cond_nodes):
+        # === TODO: this does not allow for the same variables in marginal_nodes and cond_nodes
+        # === idea: remove all overlaps from marginal_nodes
+        # === then, at the end we can do an outer product with an indicator
+        marginal_nodes_no_repeats = [node for node in marginal_nodes if node not in cond_nodes]
+        
+        # === CONVERT TO PGMPY AND SET UP VariableElimination OBJECT
+        bn = self.to_pgm()
+        infer = VariableElimination(bn)
+        
+        # === EXTRACT DIMENSIONS AND SET UP CONTAINERS
+        marginal_dims = [len(self.node_alphabets[node]) for node in marginal_nodes_no_repeats]
+        cond_dims = [len(self.node_alphabets[node]) for node in cond_nodes]
+        cond_dim_prod = reduce(lambda x, y: x*y, cond_dims) if len(cond_dims) > 0 else 1
+        conditional = np.zeros(marginal_dims + [cond_dim_prod])
+        
+        # === GET THE CONDITIONAL FOR EVERY ASSIGNMENT OF THE CONDITIONING NODES
+        for ix, vals in enumerate(itr.product(*(self.node_alphabets[c] for c in cond_nodes))):
+            factor = infer.query(
+                variables=marginal_nodes_no_repeats, 
+                evidence=dict(zip(cond_nodes, vals))
+            )
+            probs = factor.values
+            conditional[..., ix] = probs
+            
+        # === RESHAPE
+        conditional = conditional.reshape(marginal_dims + cond_dims)
+        if len(marginal_nodes) != len(marginal_nodes_no_repeats):
+            conditional = add_repeated_nodes_conditional(conditional, marginal_nodes, cond_nodes, self.node2dims)
+        
+        return conditional
+        
 
-    def get_conditional(self, marginal_nodes, cond_nodes):
+    def get_conditional(self, marginal_nodes, cond_nodes, method="new"):
         marginal_nodes_no_repeats = [node for node in marginal_nodes if node not in cond_nodes]
 
         # === COMPUTE MARGINAL OVER ALL INVOLVED NODES
         all_nodes = marginal_nodes_no_repeats + cond_nodes
-        full_log_marginal = self.get_marginals(all_nodes, log=True)
+        
+        if method == "new":
+            full_log_marginal = self.get_marginals_new(all_nodes, log=True)
+        else:
+            full_log_marginal = self.get_marginals(all_nodes, log=True)
 
         # === MARGINALIZE TO JUST THE CONDITIONING SET AND RESHAPE
         cond_log_marginal = marginalize(full_log_marginal, list(range(len(marginal_nodes_no_repeats))))
@@ -354,6 +466,19 @@ class DiscreteDAG(FunctionalDAG):
         terms = [(val - mean)**2 * marg for val, marg in zip(alphabet, marginal)]
         variance = sum(terms)
         return mean, variance
+    
+    def to_pgm(self):
+        bn = BayesianNetwork(self.arcs)
+        for node in self.nodes:
+            parents = self.node2parents[node]
+            parent_dims = [len(self.node_alphabets[par]) for par in parents]
+            card = len(self.node_alphabets[node])
+            conditional = self.conditionals[node]
+            conditional_rs = conditional.reshape(-1, conditional.shape[-1]).T
+            cpd = TabularCPD(node, card, conditional_rs, evidence=parents, evidence_card=parent_dims)
+            bn.add_cpds(cpd)
+        
+        return bn
 
     @classmethod
     def from_pgm(cls, model: BayesianNetwork):
@@ -380,8 +505,8 @@ class DiscreteDAG(FunctionalDAG):
             # === CONVERT CPD SO THAT `node` IS THE LAST DIMENSION ===
             vals = cpd.values
             nparents = len(vals.shape) - 1
-            new_shape = list(range(1, nparents+1)) + [0]
-            conditionals[node_ix] = vals.transpose(new_shape)
+            new_dims = list(range(1, nparents+1)) + [0]
+            conditionals[node_ix] = vals.transpose(new_dims)
 
             # === SAVE THIS NODE'S ALPHABET ===
             node_alphabets[node_ix] = list(range(vals.shape[0]))
@@ -398,7 +523,8 @@ class DiscreteDAG(FunctionalDAG):
         return dag, node_order, values2nums
 
     def fit(self, data, node_alphabets=None, method="mle"):
-        if method != "mle" and method != "add_one_mle" and method != "xgboost":
+        methods = {"mle", "add_one_mle", "xgboost", "random_forest"}
+        if method not in methods:
             raise NotImplementedError
         
         if node_alphabets is None:
@@ -406,10 +532,26 @@ class DiscreteDAG(FunctionalDAG):
             for node in self.nodes:
                 alphabet = list(range(max(data[:, node]) + 1))
                 node_alphabets[node] = alphabet
-        
-        if method == "xgboost":
-            conditionals = dict()
-            nodes = self.topological_sort()
+                
+        conditionals = dict()
+        nodes = self.topological_sort()
+        if method == "random_forest":
+            for node in nodes:
+                parents = self.node2parents[node]
+                alphabet = node_alphabets[node]
+                if len(parents) == 0:
+                    conditionals[node] = get_conditional(data, node, alphabet, [], [], add_one=False)
+                else:
+                    parent_alphabets = [node_alphabets[p] for p in parents]
+                    node_alphabet = node_alphabets[node]
+                    if len(set(data[:, node])) == 1:
+                        cc = indicator_conditional(parent_alphabets, node_alphabet, data[0, node])
+                        conditionals[node] = cc
+                    else:
+                        model = RandomForestClassifier()
+                        model.fit(data[:, parents], data[:, node])
+                        conditionals[node] = extract_conditional(model, parent_alphabets, node_alphabet)
+        elif method == "xgboost":
             for node in nodes:
                 parents = self.node2parents[node]
                 alphabet = node_alphabets[node]
@@ -423,19 +565,10 @@ class DiscreteDAG(FunctionalDAG):
                         conditionals[node] = cc
                     else:
                         model = xgb.XGBClassifier()
-                        model.classes_ = node_alphabet
                         model.fit(data[:, parents], data[:, node])
                         conditionals[node] = extract_conditional(model, parent_alphabets, node_alphabet)
-            
-            self.conditionals = conditionals
         else:
             add_one = method == "add_one_mle"
-            
-            conditionals = dict()
-            infer_node_alphabets = node_alphabets is None
-            if infer_node_alphabets:
-                node_alphabets = dict()
-            nodes = self.topological_sort()
             for node in nodes:
                 parents = self.node2parents[node]
                 alphabet = node_alphabets[node]
@@ -446,7 +579,7 @@ class DiscreteDAG(FunctionalDAG):
                     parent_alphabets = [node_alphabets[p] for p in parents]
                     conditionals[node] = get_conditional(data, node, alphabet, parents, parent_alphabets, add_one=add_one)
             
-            self.conditionals = conditionals
+        self.conditionals = conditionals
 
     def get_efficient_influence_function_conditionals(
         self, 
@@ -469,7 +602,11 @@ class DiscreteDAG(FunctionalDAG):
                 conds2means[cond_set] = (values * probs).sum()
             else:
                 # === COMPUTE CONDITIONAL EXPECTATION
-                probs = self.get_conditional([cond_ix, target_ix], list(cond_set))
+                clist = list(cond_set)
+                # TODO: note that the two methods below give different answers
+                # only when one of the conditioning has probability 0
+                # probs = self.get_conditional([cond_ix, target_ix], clist)
+                probs = self.get_conditional_pgmpy([cond_ix, target_ix], clist)
                 values2 = values.reshape(values.shape + (1, ) * len(cond_set))
                 exp_val_function = (values2 * probs).sum((0, 1))
                 conds2means[cond_set] = exp_val_function
