@@ -12,6 +12,7 @@ import xgboost as xgb
 from tqdm import tqdm
 from einops import repeat
 from scipy.special import logsumexp
+from sklearn.linear_model import LogisticRegression
 from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.inference import VariableElimination, BeliefPropagation
@@ -522,8 +523,8 @@ class DiscreteDAG(FunctionalDAG):
         )
         return dag, node_order, values2nums
 
-    def fit(self, data, node_alphabets=None, method="mle"):
-        methods = {"mle", "add_one_mle", "xgboost", "random_forest"}
+    def fit(self, data, node_alphabets=None, method="mle", **kwargs):
+        methods = {"mle", "add_one_mle", "xgboost", "random_forest", "logistic"}
         if method not in methods:
             raise NotImplementedError
         
@@ -535,7 +536,7 @@ class DiscreteDAG(FunctionalDAG):
                 
         conditionals = dict()
         nodes = self.topological_sort()
-        if method == "random_forest":
+        if method in {"random_forest", "xgboost", "logistic"}:
             for node in nodes:
                 parents = self.node2parents[node]
                 alphabet = node_alphabets[node]
@@ -548,23 +549,13 @@ class DiscreteDAG(FunctionalDAG):
                         cc = indicator_conditional(parent_alphabets, node_alphabet, data[0, node])
                         conditionals[node] = cc
                     else:
-                        model = RandomForestClassifier()
-                        model.fit(data[:, parents], data[:, node])
-                        conditionals[node] = extract_conditional(model, parent_alphabets, node_alphabet)
-        elif method == "xgboost":
-            for node in nodes:
-                parents = self.node2parents[node]
-                alphabet = node_alphabets[node]
-                if len(parents) == 0:
-                    conditionals[node] = get_conditional(data, node, alphabet, [], [], add_one=False)
-                else:
-                    parent_alphabets = [node_alphabets[p] for p in parents]
-                    node_alphabet = node_alphabets[node]
-                    if len(set(data[:, node])) == 1:
-                        cc = indicator_conditional(parent_alphabets, node_alphabet, data[0, node])
-                        conditionals[node] = cc
-                    else:
-                        model = xgb.XGBClassifier()
+                        if method == "random_forest":
+                            model = RandomForestClassifier()
+                        elif method == "xgboost":
+                            model = xgb.XGBClassifier()
+                        elif method == "logistic":
+                            penalty = kwargs.get("penalty", "none")
+                            model = LogisticRegression(multi_class="multinomial", penalty=penalty)
                         model.fit(data[:, parents], data[:, node])
                         conditionals[node] = extract_conditional(model, parent_alphabets, node_alphabet)
         else:
