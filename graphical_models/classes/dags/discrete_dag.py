@@ -236,7 +236,9 @@ class DiscreteDAG(FunctionalDAG):
         raise NotImplementedError
     
     def predict_from_parents(self, node, parent_vals):
-        pass
+        conditional = self.conditionals[node]
+        ixs = tuple(parent_vals.T)
+        return conditional[ixs]
         
     def get_hard_interventional_dag(self, target_node, value):
         assert len(self.parents_of(target_node)) == 0
@@ -469,7 +471,7 @@ class DiscreteDAG(FunctionalDAG):
         return mean, variance
     
     def to_pgm(self):
-        bn = BayesianNetwork(self.arcs)
+        bn = BayesianNetwork(self.to_nx())
         for node in self.nodes:
             parents = self.node2parents[node]
             parent_dims = [len(self.node_alphabets[par]) for par in parents]
@@ -524,7 +526,13 @@ class DiscreteDAG(FunctionalDAG):
         return dag, node_order, values2nums
 
     def fit(self, data, node_alphabets=None, method="mle", **kwargs):
-        methods = {"mle", "add_one_mle", "xgboost", "random_forest", "logistic"}
+        methods = {
+            "mle", 
+            "add_one_mle", 
+            "xgboost", 
+            "random_forest", 
+            "logistic"
+        }
         if method not in methods:
             raise NotImplementedError
         
@@ -550,7 +558,7 @@ class DiscreteDAG(FunctionalDAG):
                         conditionals[node] = cc
                     else:
                         if method == "random_forest":
-                            model = RandomForestClassifier()
+                            model = RandomForestClassifier(**kwargs)
                         elif method == "xgboost":
                             model = xgb.XGBClassifier()
                         elif method == "logistic":
