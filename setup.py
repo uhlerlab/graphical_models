@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name='graphical_models',
-    version='0.1a.016',
+    version='0.1a.018',
     description='',
     long_description='',
     author='',
@@ -17,7 +17,9 @@ setuptools.setup(
     ],
     install_requires=[
         'numpy',
-        'einops'
+        'einops',
+        'pgmpy',
+        'xgboost'
     ]
 )
 
