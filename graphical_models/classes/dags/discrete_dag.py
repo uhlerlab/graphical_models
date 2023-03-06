@@ -1,27 +1,34 @@
 # === BUILT-IN
 import itertools as itr
-from typing import Dict, List, Hashable
+from collections import defaultdict
 from copy import deepcopy
 from functools import reduce
 from math import prod
-from collections import defaultdict
+from typing import Dict, Hashable, List
 
 # === THIRD-PARTY
 import numpy as np
 import xgboost as xgb
-from tqdm import tqdm
 from einops import repeat
-from scipy.special import logsumexp
-from sklearn.linear_model import LogisticRegression
-from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete.CPD import TabularCPD
-from pgmpy.inference import VariableElimination, BeliefPropagation
+from pgmpy.inference import BeliefPropagation, VariableElimination
+from pgmpy.models import BayesianNetwork
+from scipy.special import logsumexp
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from tqdm import tqdm
 
-# === LOCAL
-from graphical_models.utils import core_utils
 from graphical_models.classes.dags.dag import DAG
 from graphical_models.classes.dags.functional_dag import FunctionalDAG
+# === LOCAL
+from graphical_models.utils import core_utils
+
+
+def no_warn_log(x, eps=1e-10):
+    ixs = x > eps
+    res = np.log(x, where=ixs)
+    res[~ixs] = -np.inf
+    return res
 
 
 def add_repeated_nodes_conditional(
@@ -134,7 +141,7 @@ def add_variable(
     node2dims, 
     parents
 ):
-    log_conditional = np.log(conditional)
+    log_conditional = no_warn_log(conditional)
 
     log_conditional = repeat_dimensions(
         log_conditional,
@@ -384,7 +391,7 @@ class DiscreteDAG(FunctionalDAG):
 
         current_nodes = [t[0]]
         added_nodes = {t[0]}
-        table = np.log(self.conditionals[t[0]])
+        table = no_warn_log(self.conditionals[t[0]])
         
         for new_node in t[1:]:
             node2ix = {node: ix for ix, node in enumerate(current_nodes)}
@@ -418,11 +425,13 @@ class DiscreteDAG(FunctionalDAG):
                 
         return np.exp(table)
     
-    def get_conditional_pgmpy(
-        self, 
-        marginal_nodes: list, 
+    def _get_conditional_pgmpy_values(
+        self,
+        marginal_nodes: list,
         cond_nodes: list,
-        method="variable_elimination"
+        cond_values: list,
+        method : str = "variable_elimination",
+        as_dict: bool = False
     ):
         # === TODO: this does not allow for the same variables in marginal_nodes and cond_nodes
         # === idea: remove all overlaps from marginal_nodes
@@ -439,27 +448,53 @@ class DiscreteDAG(FunctionalDAG):
             raise ValueError()
         
         # === EXTRACT DIMENSIONS AND SET UP CONTAINERS
-        marginal_dims = [len(self.node_alphabets[node]) for node in marginal_nodes_no_repeats]
-        cond_dims = [len(self.node_alphabets[node]) for node in cond_nodes]
-        cond_dim_prod = reduce(lambda x, y: x*y, cond_dims) if len(cond_dims) > 0 else 1
-        conditional = np.zeros(marginal_dims + [cond_dim_prod])
+        if not as_dict:
+            marginal_dims = [len(self.node_alphabets[node]) for node in marginal_nodes_no_repeats]
+            cond_dims = [len(self.node_alphabets[node]) for node in cond_nodes]
+            cond_dim_prod = reduce(lambda x, y: x*y, cond_dims) if len(cond_dims) > 0 else 1
+            conditional = np.zeros(marginal_dims + [cond_dim_prod])
+            # TODO: make nan?
+        else:
+            conditional = dict()
         
         # === GET THE CONDITIONAL FOR EVERY ASSIGNMENT OF THE CONDITIONING NODES
-        for ix, vals in enumerate(itr.product(*(self.node_alphabets[c] for c in cond_nodes))):
+        for ix, vals in enumerate(cond_values):
             factor = infer.query(
                 variables=marginal_nodes_no_repeats, 
                 evidence=dict(zip(cond_nodes, vals))
             )
             probs = factor.values
-            conditional[..., ix] = probs
+            if not as_dict:
+                conditional[..., ix] = probs
+            else:
+                conditional[vals] = probs
             
         # === RESHAPE
-        conditional = conditional.reshape(marginal_dims + cond_dims)
-        if len(marginal_nodes) != len(marginal_nodes_no_repeats):
-            conditional = add_repeated_nodes_conditional(conditional, marginal_nodes, cond_nodes, self.node2dims)
+        if not as_dict:
+            conditional = conditional.reshape(marginal_dims + cond_dims)
+            if len(marginal_nodes) != len(marginal_nodes_no_repeats):
+                conditional = add_repeated_nodes_conditional(conditional, marginal_nodes, cond_nodes, self.node2dims)
         
         return conditional
-        
+    
+    def get_conditional_pgmpy(
+        self, 
+        marginal_nodes: list, 
+        cond_nodes: list,
+        cond_values=None,
+        method: str = "variable_elimination"
+    ):
+        # === GET THE CONDITIONAL FOR EVERY ASSIGNMENT OF THE CONDITIONING NODES
+        as_dict = cond_values is not None
+        if cond_values is None:
+            cond_values = list(itr.product(*(self.node_alphabets[c] for c in cond_nodes)))
+        return self._get_conditional_pgmpy_values(
+            marginal_nodes,
+            cond_nodes,
+            cond_values,
+            method,
+            as_dict=as_dict
+        )
 
     def get_conditional(self, marginal_nodes, cond_nodes, method="new"):
         marginal_nodes_no_repeats = [node for node in marginal_nodes if node not in cond_nodes]
@@ -636,10 +671,20 @@ class DiscreteDAG(FunctionalDAG):
         target_ix: int, 
         cond_ix: int, 
         cond_value: int,
-        ignored_nodes = set()
+        ignored_nodes = set(),
+        sampled_values = None
     ):
         # ADD TERMS FROM THE EFFICIENT INFLUENCE FUNCTION
         conds2counts = self.get_standard_imset(ignored_nodes=ignored_nodes)
+        conds2values = None
+        if sampled_values is not None:
+            conds2values = dict()
+            for cond_set in conds2counts:
+                if len(cond_set) == 0:
+                    continue
+                else:
+                    cond_values = {tuple(val) for val in sampled_values[:, cond_set]}
+                    conds2values[cond_set] = cond_values
         
         target_values = self.node_alphabets[target_ix]
         indicator = np.array(self.node_alphabets[cond_ix]) == cond_value
@@ -656,10 +701,17 @@ class DiscreteDAG(FunctionalDAG):
                 # TODO: note that the two methods below give different answers
                 # only when one of the conditioning has probability 0
                 # probs = self.get_conditional([cond_ix, target_ix], clist)
-                probs = self.get_conditional_pgmpy([cond_ix, target_ix], clist)
-                values2 = values.reshape(values.shape + (1, ) * len(cond_set))
-                exp_val_function = (values2 * probs).sum((0, 1))
-                conds2means[cond_set] = exp_val_function
+                cond_values = conds2values[cond_set] if conds2values is not None else None
+                probs = self.get_conditional_pgmpy([cond_ix, target_ix], clist, cond_values)
+                if cond_values is None:
+                    values2 = values.reshape(values.shape + (1, ) * len(cond_set))
+                    exp_val_function = (values2 * probs).sum((0, 1))
+                    conds2means[cond_set] = exp_val_function
+                else:
+                    exp_val_function = dict()
+                    for cond_val, prob in probs.items():
+                        exp_val_function[cond_val] = (values * prob).sum()
+                    conds2means[cond_set] = exp_val_function
         
         return conds2counts, conds2means
     
@@ -669,7 +721,8 @@ class DiscreteDAG(FunctionalDAG):
         cond_ix: int, 
         cond_value: int, 
         propensity = None,
-        ignored_nodes = set()
+        ignored_nodes = set(),
+        sampled_values = None
     ):
         if propensity is None:
             propensity = self.get_marginal(cond_ix)[cond_value]
@@ -678,19 +731,31 @@ class DiscreteDAG(FunctionalDAG):
             target_ix,
             cond_ix,
             cond_value,
-            ignored_nodes=ignored_nodes
+            ignored_nodes=ignored_nodes,
+            sampled_values=sampled_values
         )
         
         def efficient_influence_function(samples):
             eif_terms = np.zeros((samples.shape[0], len(conds2means)))
             for ix, cond_set in enumerate(conds2means):
                 conditional_mean = conds2means[cond_set]
-                count = conds2counts[cond_set]
-                if len(cond_set) == 0:
-                    eif_terms[:, ix] = conditional_mean * count
+                
+                if sampled_values is None:
+                    count = conds2counts[cond_set]
+                    if len(cond_set) == 0:
+                        eif_terms[:, ix] = conditional_mean * count
+                    else:
+                        ixs = samples[:, cond_set]
+                        eif_terms[:, ix] = conditional_mean[tuple(ixs.T)] * count
                 else:
-                    ixs = samples[:, cond_set]
-                    eif_terms[:, ix] = conditional_mean[tuple(ixs.T)] * count
+                    count = conds2counts[cond_set]
+                    if len(cond_set) == 0:
+                        print("c empty")
+                        eif_terms[:, ix] = conds2means[cond_set] * count
+                    else:
+                        ixs = samples[:, cond_set]
+                        means = np.array([conditional_mean[tuple(ix)] for ix in ixs])
+                        eif_terms[:, ix] = means * count
             eif = np.sum(eif_terms, axis=1)
             return eif / propensity
 
