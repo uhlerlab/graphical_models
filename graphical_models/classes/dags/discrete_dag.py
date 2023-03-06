@@ -665,26 +665,17 @@ class DiscreteDAG(FunctionalDAG):
                     conditionals[node] = get_conditional(data, node, alphabet, parents, parent_alphabets, add_one=add_one)
             
         self.conditionals = conditionals
-
-    def get_efficient_influence_function_conditionals(
+        
+    def get_efficient_influence_function_conditionals_full(
         self, 
         target_ix: int, 
         cond_ix: int, 
         cond_value: int,
         ignored_nodes = set(),
-        sampled_values = None
+        inference_method="variable_elimination"
     ):
         # ADD TERMS FROM THE EFFICIENT INFLUENCE FUNCTION
         conds2counts = self.get_standard_imset(ignored_nodes=ignored_nodes)
-        conds2values = None
-        if sampled_values is not None:
-            conds2values = dict()
-            for cond_set in conds2counts:
-                if len(cond_set) == 0:
-                    continue
-                else:
-                    cond_values = {tuple(val) for val in sampled_values[:, cond_set]}
-                    conds2values[cond_set] = cond_values
         
         target_values = self.node_alphabets[target_ix]
         indicator = np.array(self.node_alphabets[cond_ix]) == cond_value
@@ -698,41 +689,62 @@ class DiscreteDAG(FunctionalDAG):
             else:
                 # === COMPUTE CONDITIONAL EXPECTATION
                 clist = list(cond_set)
-                # TODO: note that the two methods below give different answers
-                # only when one of the conditioning has probability 0
-                # probs = self.get_conditional([cond_ix, target_ix], clist)
-                cond_values = conds2values[cond_set] if conds2values is not None else None
-                probs = self.get_conditional_pgmpy([cond_ix, target_ix], clist, cond_values)
-                if cond_values is None:
+                probs = self.get_conditional_pgmpy([cond_ix, target_ix], clist, method=inference_method)
+                values2 = values.reshape(values.shape + (1, ) * len(cond_set))
+                exp_val_function = (values2 * probs).sum((0, 1))
+                conds2means[cond_set] = exp_val_function
+        
+        return conds2counts, conds2means
+        
+    def get_efficient_influence_function_conditionals_partial(
+        self, 
+        target_ix: int, 
+        cond_ix: int, 
+        cond_value: int,
+        ignored_nodes = set(),
+        sampled_values = None,
+        inference_method="variable_elimination"
+    ):
+        # ADD TERMS FROM THE EFFICIENT INFLUENCE FUNCTION
+        conds2counts = self.get_standard_imset(ignored_nodes=ignored_nodes)
+        
+        target_values = self.node_alphabets[target_ix]
+        indicator = np.array(self.node_alphabets[cond_ix]) == cond_value
+        values = np.outer(indicator, target_values)
+
+        conds2means = dict()
+        for cond_set in conds2counts:
+            if len(cond_set) == 0:
+                probs = self.get_marginals([cond_ix, target_ix])
+                conds2means[cond_set] = (values * probs).sum()
+            else:
+                # === COMPUTE CONDITIONAL EXPECTATION
+                clist = list(cond_set)
+                cond_values = {tuple(val) for val in sampled_values[:, cond_set]}
+                probs = self.get_conditional_pgmpy([cond_ix, target_ix], clist, cond_values, method=inference_method)
+                exp_val_function = dict()
+                for cond_val, prob in probs.items():
                     values2 = values.reshape(values.shape + (1, ) * len(cond_set))
-                    exp_val_function = (values2 * probs).sum((0, 1))
-                    conds2means[cond_set] = exp_val_function
-                else:
-                    exp_val_function = dict()
-                    for cond_val, prob in probs.items():
-                        exp_val_function[cond_val] = (values * prob).sum()
-                    conds2means[cond_set] = exp_val_function
+                    exp_val_function[cond_val] = (values2 * prob).sum()
+                conds2means[cond_set] = exp_val_function
         
         return conds2counts, conds2means
     
-    def get_efficient_influence_function(
-        self, 
+    def get_efficient_influence_function_full(
+        self,
         target_ix: int, 
         cond_ix: int, 
         cond_value: int, 
         propensity = None,
         ignored_nodes = set(),
-        sampled_values = None
+        inference_method="variable_elimination"
     ):
-        if propensity is None:
-            propensity = self.get_marginal(cond_ix)[cond_value]
-
-        conds2counts, conds2means = self.get_efficient_influence_function_conditionals(
+        conds2counts, conds2means = self.get_efficient_influence_function_conditionals_full(
             target_ix,
             cond_ix,
             cond_value,
             ignored_nodes=ignored_nodes,
-            sampled_values=sampled_values
+            inference_method=inference_method
         )
         
         def efficient_influence_function(samples):
@@ -740,26 +752,86 @@ class DiscreteDAG(FunctionalDAG):
             for ix, cond_set in enumerate(conds2means):
                 conditional_mean = conds2means[cond_set]
                 
-                if sampled_values is None:
-                    count = conds2counts[cond_set]
-                    if len(cond_set) == 0:
-                        eif_terms[:, ix] = conditional_mean * count
-                    else:
-                        ixs = samples[:, cond_set]
-                        eif_terms[:, ix] = conditional_mean[tuple(ixs.T)] * count
+                count = conds2counts[cond_set]
+                if len(cond_set) == 0:
+                    eif_terms[:, ix] = conditional_mean * count
                 else:
-                    count = conds2counts[cond_set]
-                    if len(cond_set) == 0:
-                        print("c empty")
-                        eif_terms[:, ix] = conds2means[cond_set] * count
-                    else:
-                        ixs = samples[:, cond_set]
-                        means = np.array([conditional_mean[tuple(ix)] for ix in ixs])
-                        eif_terms[:, ix] = means * count
+                    ixs = samples[:, cond_set]
+                    eif_terms[:, ix] = conditional_mean[tuple(ixs.T)] * count
             eif = np.sum(eif_terms, axis=1)
             return eif / propensity
 
         return efficient_influence_function
+    
+    def get_efficient_influence_function_partial(
+        self, 
+        target_ix: int, 
+        cond_ix: int, 
+        cond_value: int, 
+        propensity = None,
+        ignored_nodes = set(),
+        sampled_values = None,
+        inference_method="variable_elimination"
+    ):
+        conds2counts, conds2means = self.get_efficient_influence_function_conditionals_partial(
+            target_ix,
+            cond_ix,
+            cond_value,
+            ignored_nodes=ignored_nodes,
+            sampled_values=sampled_values,
+            inference_method=inference_method
+        )
+        
+        def efficient_influence_function(samples):
+            eif_terms = np.zeros((samples.shape[0], len(conds2means)))
+            for ix, cond_set in enumerate(conds2means):
+                conditional_mean = conds2means[cond_set]
+                
+                count = conds2counts[cond_set]
+                if len(cond_set) == 0:
+                    eif_terms[:, ix] = conds2means[cond_set] * count
+                else:
+                    ixs = samples[:, cond_set]
+                    means = np.array([conditional_mean[tuple(ix)] for ix in ixs])
+                    eif_terms[:, ix] = means * count
+            eif = np.sum(eif_terms, axis=1)
+            return eif / propensity
+
+        return efficient_influence_function
+    
+    def get_efficient_influence_function(
+        self, 
+        target_ix: int,
+        cond_ix: int, 
+        cond_value: int, 
+        propensity = None,
+        ignored_nodes = set(),
+        sampled_values = None,
+        partial=True,
+        inference_method="variable_elimination"
+    ):
+        if propensity is None:
+            propensity = self.get_marginal(cond_ix)[cond_value]
+        
+        if partial:
+            return self.get_efficient_influence_function_partial(
+                target_ix,
+                cond_ix,
+                cond_value,
+                propensity=propensity,
+                ignored_nodes=ignored_nodes,
+                sampled_values=sampled_values,
+                inference_method=inference_method
+            )
+        else:
+            return self.get_efficient_influence_function_full(
+                target_ix,
+                cond_ix,
+                cond_value,
+                propensity=propensity,
+                ignored_nodes=ignored_nodes,
+                inference_method=inference_method
+            )
             
 
 
