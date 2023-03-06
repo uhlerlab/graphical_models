@@ -197,14 +197,54 @@ class DiscreteDAG(FunctionalDAG):
             else:
                 parent_ixs = [self._node2ix[p] for p in parents]
                 parent_vals = samples[:, parent_ixs]
-                dists = [self.conditionals[node][tuple(v)] for v in parent_vals]
-                dists2 = np.array(dists)
+                dists = self.conditionals[node][tuple(parent_vals.T)]
                 unifs = np.random.random(size=nsamples)
-                dist_sums = np.cumsum(dists2, axis=1)
+                dist_sums = np.cumsum(dists, axis=1)
                 vals = np.argmax(dist_sums > unifs[:, None], axis=1)
             samples[:, self._node2ix[node]] = vals
 
         return samples
+    
+    def weighted_samples(self, nodes: list, values: np.ndarray, progress=False):
+        nsamples = values.shape[0]
+        samples = np.zeros((nsamples, len(self._nodes)), dtype=int)
+        samples[:, nodes] = values
+        weights = np.zeros((nsamples, len(nodes)))
+        
+        t = self.topological_sort()
+        t = t if not progress else tqdm(t)
+
+        for node in t:
+            if node not in nodes:
+                parents = self.node2parents[node]
+                if len(parents) == 0:
+                    vals = np.random.choice(
+                        self.node_alphabets[node], 
+                        p=self.conditionals[node], 
+                        size=nsamples
+                    )
+                else:
+                    parent_ixs = [self._node2ix[p] for p in parents]
+                    parent_vals = samples[:, parent_ixs]
+                    dists = self.conditionals[node][tuple(parent_vals.T)]
+                    unifs = np.random.random(size=nsamples)
+                    dist_sums = np.cumsum(dists, axis=1)
+                    vals = np.argmax(dist_sums > unifs[:, None], axis=1)
+                samples[:, self._node2ix[node]] = vals
+            else:
+                parents = self.node2parents[node]
+                node_values = values[:, nodes.index(node)]
+                if len(parents) == 0:
+                    dists = self.conditionals[node]
+                    probs = dists[node_values]
+                else:
+                    parent_ixs = [self._node2ix[p] for p in parents]
+                    parent_vals = samples[:, parent_ixs]
+                    dists = self.conditionals[node][tuple(parent_vals.T)]
+                    probs = dists[np.arange(nsamples), node_values]
+                weights[:, nodes.index(node)] = probs
+
+        return samples, weights
 
     def sample_interventional(self, nodes2intervention_values):
         nsamples = list(nodes2intervention_values.values())[0].shape[0]
@@ -261,6 +301,8 @@ class DiscreteDAG(FunctionalDAG):
         )
         
     def get_marginals_new(self, marginal_nodes: List[Hashable], log=False):
+        if len(marginal_nodes) == 0:
+            return 1
         ancestor_subgraph = self.ancestral_subgraph(set(marginal_nodes))
         elimination_ordering = ancestor_subgraph.topological_sort()
         node0 = elimination_ordering[0]
@@ -280,7 +322,6 @@ class DiscreteDAG(FunctionalDAG):
                     self.node2dims,
                     remaining_parents,
                 )
-                print(child, self.conditionals[child].shape)
                 current_nodes.append(child)
                 
             # === ELIMINATE THE CURRENT NODE
@@ -377,7 +418,12 @@ class DiscreteDAG(FunctionalDAG):
                 
         return np.exp(table)
     
-    def get_conditional_pgmpy(self, marginal_nodes, cond_nodes):
+    def get_conditional_pgmpy(
+        self, 
+        marginal_nodes: list, 
+        cond_nodes: list,
+        method="variable_elimination"
+    ):
         # === TODO: this does not allow for the same variables in marginal_nodes and cond_nodes
         # === idea: remove all overlaps from marginal_nodes
         # === then, at the end we can do an outer product with an indicator
@@ -385,7 +431,12 @@ class DiscreteDAG(FunctionalDAG):
         
         # === CONVERT TO PGMPY AND SET UP VariableElimination OBJECT
         bn = self.to_pgm()
-        infer = VariableElimination(bn)
+        if method == "variable_elimination":
+            infer = VariableElimination(bn)
+        elif method == "belief_propagation":
+            infer = BeliefPropagation(bn)
+        else:
+            raise ValueError()
         
         # === EXTRACT DIMENSIONS AND SET UP CONTAINERS
         marginal_dims = [len(self.node_alphabets[node]) for node in marginal_nodes_no_repeats]
@@ -560,7 +611,7 @@ class DiscreteDAG(FunctionalDAG):
                         if method == "random_forest":
                             model = RandomForestClassifier(**kwargs)
                         elif method == "xgboost":
-                            model = xgb.XGBClassifier()
+                            model = xgb.XGBClassifier(predictor="cpu_predictor", **kwargs)
                         elif method == "logistic":
                             penalty = kwargs.get("penalty", "none")
                             model = LogisticRegression(multi_class="multinomial", penalty=penalty)
