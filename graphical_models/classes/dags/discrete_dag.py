@@ -31,6 +31,44 @@ def no_warn_log(x, eps=1e-10):
     return res
 
 
+def add_repeated_nodes_marginal(
+    conditional: np.ndarray, 
+    marginal_nodes: list, 
+    cond_nodes: list,
+    node2dims: dict,
+    cond_vals: int
+):
+    marginal_nodes_no_repeats = [node for node in marginal_nodes if node not in cond_nodes]
+    marginal_nodes_repeat = [node for node in marginal_nodes if node in cond_nodes]
+    
+    # === SET UP PATTERNS FOR START AND END DIMENSION
+    print(conditional.shape, len(marginal_nodes_no_repeats))
+    start_dims = " ".join([f"d{ix}" for ix in marginal_nodes_no_repeats])
+    end_dims = " ".join([
+        f"d{node}" if node in marginal_nodes_no_repeats else f"r{node}" 
+        for node in marginal_nodes
+    ])
+    
+    # === FOR EACH MARGINAL NODE THAT'S IN THE CONDITIONING SET, REPEAT
+    pattern = start_dims + " -> " + end_dims
+    repeats = {f"r{node}": node2dims[node] for node in marginal_nodes_repeat}
+    conditional = repeat(conditional, pattern, **repeats)
+
+    # NOTE: THE BELOW NO LONGER APPLIES, SINCE WHETHER WE SHOULD SET CONDITIONAL = 0
+    # DEPENDS ON WHAT THE CONDITIONING VALUE OF THE NODE IS
+    if len(marginal_nodes_repeat) > 1:
+        raise NotImplementedError
+    else:
+        rep_node = marginal_nodes_repeat[0]
+        cond_repeat_ix = cond_nodes.index(rep_node)
+        ones = (np.arange(node2dims[marginal_nodes_repeat[0]]) == cond_vals[cond_repeat_ix]).astype(int)
+        repeats = {f"d{node}": node2dims[node] for node in marginal_nodes if node != rep_node}
+        ones = repeat(ones, f"r{rep_node} -> {end_dims}", **repeats)
+    conditional = conditional * ones
+    
+    return conditional
+
+
 def add_repeated_nodes_conditional(
     conditional: np.ndarray, 
     marginal_nodes: list, 
@@ -453,7 +491,6 @@ class DiscreteDAG(FunctionalDAG):
             cond_dims = [len(self.node_alphabets[node]) for node in cond_nodes]
             cond_dim_prod = reduce(lambda x, y: x*y, cond_dims) if len(cond_dims) > 0 else 1
             conditional = np.zeros(marginal_dims + [cond_dim_prod])
-            # TODO: make nan?
         else:
             conditional = dict()
         
@@ -467,6 +504,9 @@ class DiscreteDAG(FunctionalDAG):
             if not as_dict:
                 conditional[..., ix] = probs
             else:
+                marginal_dims = [len(self.node_alphabets[node]) for node in marginal_nodes_no_repeats]
+                if len(marginal_nodes) != len(marginal_nodes_no_repeats):
+                    probs = add_repeated_nodes_marginal(probs, marginal_nodes, cond_nodes, self.node2dims, vals)
                 conditional[vals] = probs
             
         # === RESHAPE
@@ -488,6 +528,22 @@ class DiscreteDAG(FunctionalDAG):
         as_dict = cond_values is not None
         if cond_values is None:
             cond_values = list(itr.product(*(self.node_alphabets[c] for c in cond_nodes)))
+        # if not as_dict:
+        #     ans1 = self._get_conditional_pgmpy_values(
+        #         marginal_nodes,
+        #         cond_nodes,
+        #         cond_values,
+        #         method,
+        #         as_dict=True
+        #     )
+        #     ans2 = self._get_conditional_pgmpy_values(
+        #         marginal_nodes,
+        #         cond_nodes,
+        #         cond_values,
+        #         method,
+        #         as_dict=False
+        #     )
+        #     breakpoint()
         return self._get_conditional_pgmpy_values(
             marginal_nodes,
             cond_nodes,
@@ -724,8 +780,8 @@ class DiscreteDAG(FunctionalDAG):
                 probs = self.get_conditional_pgmpy([cond_ix, target_ix], clist, cond_values, method=inference_method)
                 exp_val_function = dict()
                 for cond_val, prob in probs.items():
-                    values2 = values.reshape(values.shape + (1, ) * len(cond_set))
-                    exp_val_function[cond_val] = (values2 * prob).sum()
+                    expval = (values * prob).sum()
+                    exp_val_function[cond_val] = expval
                 conds2means[cond_set] = exp_val_function
         
         return conds2counts, conds2means
