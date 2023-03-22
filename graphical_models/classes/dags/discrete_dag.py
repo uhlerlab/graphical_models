@@ -42,7 +42,6 @@ def add_repeated_nodes_marginal(
     marginal_nodes_repeat = [node for node in marginal_nodes if node in cond_nodes]
     
     # === SET UP PATTERNS FOR START AND END DIMENSION
-    print(conditional.shape, len(marginal_nodes_no_repeats))
     start_dims = " ".join([f"d{ix}" for ix in marginal_nodes_no_repeats])
     end_dims = " ".join([
         f"d{node}" if node in marginal_nodes_no_repeats else f"r{node}" 
@@ -164,7 +163,8 @@ def get_conditional(
     else:
         nvals = len(vals)
         conditional = np.ones(list(map(len, parent_alphabets)) + [nvals]) * 1/nvals
-        for parent_vals in itr.product(*parent_alphabets):
+        parent_vals_list = {tuple(parent_vals) for parent_vals in data[:, parent_ixs]}
+        for parent_vals in parent_vals_list:
             ixs = (data[:, parent_ixs] == parent_vals).all(axis=1)
             subdata = data[ixs, :]
             if subdata.shape[0] > 0:
@@ -551,6 +551,38 @@ class DiscreteDAG(FunctionalDAG):
             method,
             as_dict=as_dict
         )
+        
+    def get_conditional_importance_sampling(
+        self, 
+        marginal_nodes: list, 
+        cond_nodes: list,
+        cond_values=None,
+        nparticles: int = 1000
+    ):
+        # === GET THE CONDITIONAL FOR EVERY ASSIGNMENT OF THE CONDITIONING NODES
+        vals = np.repeat(np.array(list(cond_values)), repeats=nparticles, axis=0)
+        samples, weights = self.weighted_samples(list(cond_nodes), vals)
+        prod_weights = np.prod(weights, axis=1)
+        
+        conds2condtionals = dict()
+        conds2marginals = dict()
+        shape = [len(self.node_alphabets[node]) for node in marginal_nodes]
+        possible_marginal_vals = list(itr.product(*(self.node_alphabets[node] for node in marginal_nodes)))
+        for ix, cond_val in enumerate(cond_values):
+            start_ix, end_ix = nparticles * ix, nparticles * (ix + 1)
+            subset_weights = prod_weights[start_ix:end_ix]
+            subset_samples = samples[start_ix:end_ix, marginal_nodes]
+            
+            conditional_unnorm = np.zeros(shape)
+            for marginal_node_vals in possible_marginal_vals:
+                ixs = np.where((subset_samples == marginal_node_vals).all(axis=1))[0]
+                conditional_unnorm[marginal_node_vals] = np.sum(subset_weights[ixs])
+            conditional = conditional_unnorm / np.sum(conditional_unnorm)
+            
+            conds2condtionals[cond_val] = conditional
+            conds2marginals[cond_val] = np.sum(subset_weights) / np.sum(prod_weights)
+            
+        return conds2condtionals, conds2marginals
 
     def get_conditional(self, marginal_nodes, cond_nodes, method="new"):
         marginal_nodes_no_repeats = [node for node in marginal_nodes if node not in cond_nodes]
@@ -759,7 +791,8 @@ class DiscreteDAG(FunctionalDAG):
         cond_value: int,
         ignored_nodes = set(),
         sampled_values = None,
-        inference_method="variable_elimination"
+        inference_method="variable_elimination",
+        **kwargs
     ):
         # ADD TERMS FROM THE EFFICIENT INFLUENCE FUNCTION
         conds2counts = self.get_standard_imset(ignored_nodes=ignored_nodes)
@@ -777,7 +810,21 @@ class DiscreteDAG(FunctionalDAG):
                 # === COMPUTE CONDITIONAL EXPECTATION
                 clist = list(cond_set)
                 cond_values = {tuple(val) for val in sampled_values[:, cond_set]}
-                probs = self.get_conditional_pgmpy([cond_ix, target_ix], clist, cond_values, method=inference_method)
+                
+                if inference_method == "importance_reweighting":
+                    probs, _ = self.get_conditional_importance_sampling(
+                        [cond_ix, target_ix],
+                        clist,
+                        cond_values,
+                        nparticles=kwargs["nparticles"]
+                    )
+                else:
+                    probs = self.get_conditional_pgmpy(
+                        [cond_ix, target_ix], 
+                        clist, 
+                        cond_values, 
+                        method=inference_method
+                    )
                 exp_val_function = dict()
                 for cond_val, prob in probs.items():
                     expval = (values * prob).sum()
@@ -827,7 +874,8 @@ class DiscreteDAG(FunctionalDAG):
         propensity = None,
         ignored_nodes = set(),
         sampled_values = None,
-        inference_method="variable_elimination"
+        inference_method="variable_elimination",
+        **kwargs
     ):
         conds2counts, conds2means = self.get_efficient_influence_function_conditionals_partial(
             target_ix,
@@ -835,7 +883,8 @@ class DiscreteDAG(FunctionalDAG):
             cond_value,
             ignored_nodes=ignored_nodes,
             sampled_values=sampled_values,
-            inference_method=inference_method
+            inference_method=inference_method,
+            **kwargs
         )
         
         def efficient_influence_function(samples):
@@ -864,7 +913,8 @@ class DiscreteDAG(FunctionalDAG):
         ignored_nodes = set(),
         sampled_values = None,
         partial=True,
-        inference_method="variable_elimination"
+        inference_method="variable_elimination",
+        **kwargs
     ):
         if propensity is None:
             propensity = self.get_marginal(cond_ix)[cond_value]
@@ -877,7 +927,8 @@ class DiscreteDAG(FunctionalDAG):
                 propensity=propensity,
                 ignored_nodes=ignored_nodes,
                 sampled_values=sampled_values,
-                inference_method=inference_method
+                inference_method=inference_method,
+                **kwargs
             )
         else:
             return self.get_efficient_influence_function_full(
