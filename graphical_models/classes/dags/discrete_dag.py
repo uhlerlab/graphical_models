@@ -10,7 +10,7 @@ from typing import Dict, Hashable, List
 import networkx as nx
 import numpy as np
 import xgboost as xgb
-from einops import repeat
+from einops import repeat, einsum
 from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
 from pgmpy.models import BayesianNetwork
@@ -346,11 +346,12 @@ class DiscreteDAG(FunctionalDAG):
             node_alphabets=self.node_alphabets
         )
         
-    def _get_marginal_dag_node(self, marginalized_node):
+    def _get_marginal_dag_node(self, marginalized_node, relabel=False):
         # === NEED PARENTS AND CHILDREN OF THIS NODE
         m_children = self.children_of(marginalized_node)
-        m_parents = self.parents_of(marginalized_node)
+        m_parents = self.node2parents[marginalized_node]
         m_conditional = self.conditionals[marginalized_node]
+        m_shape = " ".join([f"d{i}" for i in m_parents + [marginalized_node]])
         
         # === SPECIFY NEW PARENT SETS AND CORRESPONDING ARCS
         new_arcs = {
@@ -358,8 +359,12 @@ class DiscreteDAG(FunctionalDAG):
             if j != marginalized_node and i != marginalized_node
         }
         new_node2parents = deepcopy(self.node2parents)
+        del new_node2parents[marginalized_node]
         for m_child in m_children:
-            new_parents = m_parents | (self.node2parents[m_child] - {marginalized_node})
+            new_parents = [p for p in self.node2parents[m_child] if p != marginalized_node]
+            new_parents += [p for p in m_parents if p not in self.node2parents[m_child]]
+            new_node2parents[m_child] = new_parents
+            
             new_arcs |= {(p, m_child) for p in new_parents}
             
         # === COMPUTE NEW CONDITIONALS
@@ -370,36 +375,50 @@ class DiscreteDAG(FunctionalDAG):
         for m_child in m_children:
             child_conditional = self.conditionals[m_child]
             
-            # === SETS
-            common_parents = m_parents & self.node2parents[m_child]
-            other_parents_child = self.node2parents[m_child] - common_parents - {marginalized_node}
-            other_parents_marginalized = m_parents - common_parents
-            
             # === COMPUTE NEW CONDITIONAL FROM OLD
-            new_conditional = None
+            child_shape = " ".join([f"d{i}" for i in self.node2parents[m_child] + [m_child]])
+            output_shape = " ".join([f"d{i}" for i in new_node2parents[m_child] + [m_child]])
+            pattern = f"{child_shape}, {m_shape} -> {output_shape}"
+            new_conditional = einsum(child_conditional, m_conditional, pattern)
+            # the line below is only needed for numerical stability
+            new_conditional = new_conditional / new_conditional.sum(axis=-1, keepdims=True)
             new_conditionals[m_child] = new_conditional
             
-        return DiscreteDAG(
-            nodes=self.nodes - {marginalized_node},
+        new_nodes = self.nodes - {marginalized_node}
+        new_alphabets = {k: v for k, v in self.node_alphabets.items() if k != marginalized_node}
+        labels = {node: node for node in new_nodes}
+        if relabel:
+            labels = {node: node if node < marginalized_node else node - 1 for node in new_nodes}
+            new_nodes = {labels[node] for node in new_nodes}
+            new_arcs = {(labels[i], labels[j]) for i, j in new_arcs}
+            new_conditionals = {labels[node]: new_conditionals[node] for node in new_conditionals}
+            new_node2parents = {labels[node]: [labels[p] for p in new_node2parents[node]] for node in new_node2parents}
+            new_alphabets = {labels[node]: new_alphabets[node] for node in new_alphabets}
+        
+        new_ddag = DiscreteDAG(
+            nodes=new_nodes,
             arcs=new_arcs,
             conditionals=new_conditionals,
             node2parents=new_node2parents,
-            node_alphabets={k: v for k, v in self.node_alphabets.items() if k != marginalized_node}
+            node_alphabets=new_alphabets
         )
         
-    def get_marginal_dag(self, marginalized_nodes):
-        pgmpy_dag = self.to_pgm()
-        pgmpy_dag.remove_nodes_from([str(node) for node in marginalized_nodes])
-        breakpoint()
-        ddag, node_order, vals2nums = DiscreteDAG.from_pgm(pgmpy_dag)
-        breakpoint()
-        return ddag
+        return new_ddag, labels
         
-        # === BELOW: CUSTOM IMPLEMENTATION OF MARGINALIZATION
-        # new_dag = self.copy()
-        # for node in marginalized_nodes:
-        #     new_dag = new_dag._get_marginal_dag_node(node)
-        # return new_dag
+    def get_marginal_dag(self, marginalized_nodes, relabel=False):
+        new_dag = self.copy()
+        relabeling_function = {node: node for node in self.nodes}
+        nodes2marginalize = list(marginalized_nodes)
+        while len(nodes2marginalize) > 0:
+            node = nodes2marginalize.pop()
+            node_label = relabeling_function[node]
+            new_dag, labels = new_dag._get_marginal_dag_node(node_label, relabel=relabel)
+            relabeling_function = {
+                node: labels[relabeling_function[node]] 
+                for node in relabeling_function
+                if relabeling_function[node] in labels
+            }
+        return new_dag, relabeling_function
         
     def get_marginals_new(self, marginal_nodes: List[Hashable], log=False):
         if len(marginal_nodes) == 0:
@@ -700,10 +719,13 @@ class DiscreteDAG(FunctionalDAG):
         variance = sum(terms)
         return mean, variance
     
-    def to_pgm(self):
-        nx_graph = nx.DiGraph()
-        nx_graph.add_nodes_from([str(node) for node in self._nodes])
-        nx_graph.add_edges_from([(str(i), str(j)) for i, j in self._arcs])
+    def to_pgm(self, as_string=False):
+        if as_string:
+            nx_graph = nx.DiGraph()
+            nx_graph.add_nodes_from([str(node) for node in self._nodes])
+            nx_graph.add_edges_from([(str(i), str(j)) for i, j in self._arcs])
+        else:
+            nx_graph = self.to_nx()
     
         bn = BayesianNetwork(nx_graph)
         for node in self.nodes:
@@ -713,9 +735,9 @@ class DiscreteDAG(FunctionalDAG):
             conditional = self.conditionals[node]
             conditional_rs = conditional.reshape(-1, conditional.shape[-1]).T
             
-            node_str = str(node)
-            parents_str = [str(par) for par in parents]
-            cpd = TabularCPD(node_str, card, conditional_rs, evidence=parents_str, evidence_card=parent_dims)
+            node_name = str(node) if as_string else node
+            parent_names = [str(p) for p in parents] if as_string else parents
+            cpd = TabularCPD(node_name, card, conditional_rs, evidence=parent_names, evidence_card=parent_dims)
             bn.add_cpds(cpd)
             
         return bn
