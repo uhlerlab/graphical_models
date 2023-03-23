@@ -7,6 +7,7 @@ from math import prod
 from typing import Dict, Hashable, List
 
 # === THIRD-PARTY
+import networkx as nx
 import numpy as np
 import xgboost as xgb
 from einops import repeat
@@ -345,6 +346,61 @@ class DiscreteDAG(FunctionalDAG):
             node_alphabets=self.node_alphabets
         )
         
+    def _get_marginal_dag_node(self, marginalized_node):
+        # === NEED PARENTS AND CHILDREN OF THIS NODE
+        m_children = self.children_of(marginalized_node)
+        m_parents = self.parents_of(marginalized_node)
+        m_conditional = self.conditionals[marginalized_node]
+        
+        # === SPECIFY NEW PARENT SETS AND CORRESPONDING ARCS
+        new_arcs = {
+            (i, j) for i, j in self.arcs 
+            if j != marginalized_node and i != marginalized_node
+        }
+        new_node2parents = deepcopy(self.node2parents)
+        for m_child in m_children:
+            new_parents = m_parents | (self.node2parents[m_child] - {marginalized_node})
+            new_arcs |= {(p, m_child) for p in new_parents}
+            
+        # === COMPUTE NEW CONDITIONALS
+        new_conditionals = {
+            node: self.conditionals[node]
+            for node in self.nodes - {marginalized_node} - m_children
+        }
+        for m_child in m_children:
+            child_conditional = self.conditionals[m_child]
+            
+            # === SETS
+            common_parents = m_parents & self.node2parents[m_child]
+            other_parents_child = self.node2parents[m_child] - common_parents - {marginalized_node}
+            other_parents_marginalized = m_parents - common_parents
+            
+            # === COMPUTE NEW CONDITIONAL FROM OLD
+            new_conditional = None
+            new_conditionals[m_child] = new_conditional
+            
+        return DiscreteDAG(
+            nodes=self.nodes - {marginalized_node},
+            arcs=new_arcs,
+            conditionals=new_conditionals,
+            node2parents=new_node2parents,
+            node_alphabets={k: v for k, v in self.node_alphabets.items() if k != marginalized_node}
+        )
+        
+    def get_marginal_dag(self, marginalized_nodes):
+        pgmpy_dag = self.to_pgm()
+        pgmpy_dag.remove_nodes_from([str(node) for node in marginalized_nodes])
+        breakpoint()
+        ddag, node_order, vals2nums = DiscreteDAG.from_pgm(pgmpy_dag)
+        breakpoint()
+        return ddag
+        
+        # === BELOW: CUSTOM IMPLEMENTATION OF MARGINALIZATION
+        # new_dag = self.copy()
+        # for node in marginalized_nodes:
+        #     new_dag = new_dag._get_marginal_dag_node(node)
+        # return new_dag
+        
     def get_marginals_new(self, marginal_nodes: List[Hashable], log=False):
         if len(marginal_nodes) == 0:
             return 1
@@ -645,16 +701,23 @@ class DiscreteDAG(FunctionalDAG):
         return mean, variance
     
     def to_pgm(self):
-        bn = BayesianNetwork(self.to_nx())
+        nx_graph = nx.DiGraph()
+        nx_graph.add_nodes_from([str(node) for node in self._nodes])
+        nx_graph.add_edges_from([(str(i), str(j)) for i, j in self._arcs])
+    
+        bn = BayesianNetwork(nx_graph)
         for node in self.nodes:
             parents = self.node2parents[node]
             parent_dims = [len(self.node_alphabets[par]) for par in parents]
             card = len(self.node_alphabets[node])
             conditional = self.conditionals[node]
             conditional_rs = conditional.reshape(-1, conditional.shape[-1]).T
-            cpd = TabularCPD(node, card, conditional_rs, evidence=parents, evidence_card=parent_dims)
+            
+            node_str = str(node)
+            parents_str = [str(par) for par in parents]
+            cpd = TabularCPD(node_str, card, conditional_rs, evidence=parents_str, evidence_card=parent_dims)
             bn.add_cpds(cpd)
-        
+            
         return bn
 
     @classmethod
@@ -684,7 +747,7 @@ class DiscreteDAG(FunctionalDAG):
             nparents = len(vals.shape) - 1
             new_dims = list(range(1, nparents+1)) + [0]
             conditionals[node_ix] = vals.transpose(new_dims)
-
+            
             # === SAVE THIS NODE'S ALPHABET ===
             node_alphabets[node_ix] = list(range(vals.shape[0]))
 
