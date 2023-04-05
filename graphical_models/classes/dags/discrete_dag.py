@@ -219,7 +219,8 @@ class DiscreteDAG(FunctionalDAG):
         
         for node, parents in node2parents.items():
             expected_shape = tuple([len(node_alphabets[p]) for p in parents + [node]])
-            assert conditionals[node].shape == expected_shape
+            if conditionals is not None:
+                assert conditionals[node].shape == expected_shape
         
     def copy(self):
         return deepcopy(self)
@@ -718,6 +719,26 @@ class DiscreteDAG(FunctionalDAG):
         terms = [(val - mean)**2 * marg for val, marg in zip(alphabet, marginal)]
         variance = sum(terms)
         return mean, variance
+    
+    def to_torch(self, device=None):
+        import torch
+        from graphical_models.classes.dags.discrete_dag_torch import DiscreteDAGTorch
+        
+        if device is None:
+            device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
+        conditionals = {
+            node: torch.from_numpy(conditional.astype(np.float64)).to(device)
+            for node, conditional in self.conditionals.items()
+        }
+        ddag_torch = DiscreteDAGTorch(
+            self.nodes,
+            self.arcs,
+            conditionals,
+            self.node2parents,
+            self.node_alphabets,
+            device=device
+        )
+        return ddag_torch
     
     def to_pgm(self, as_string=False):
         if as_string:
