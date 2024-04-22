@@ -109,12 +109,13 @@ def get_conditional(
     vals, 
     parent_ixs: list, 
     parent_alphabets,
-    add_one=False
+    add_one=False,
+    alpha: float = 1
 ):
     if len(parent_ixs) == 0:
-        counts = np.array([np.sum(data[:, node] == val) for val in vals])
+        counts = np.array([np.sum(data[:, node] == val) for val in vals]).astype(float)
         if add_one:
-            counts += 1
+            counts += alpha
         return counts / counts.sum()
     else:
         nvals = len(vals)
@@ -123,7 +124,7 @@ def get_conditional(
             ixs = (data[:, parent_ixs] == parent_vals).all(axis=1)
             subdata = data[ixs, :]
             if subdata.shape[0] > 0:
-                conditional[tuple(parent_vals)] = get_conditional(subdata, node, vals, [], [], add_one=add_one)
+                conditional[tuple(parent_vals)] = get_conditional(subdata, node, vals, [], [], add_one=add_one, alpha=alpha)
         return conditional
 
 
@@ -241,7 +242,7 @@ class DiscreteDAG(FunctionalDAG):
         return conditional[ixs]
         
     def get_hard_interventional_dag(self, target_node, value):
-        assert len(self.parents_of(target_node)) == 0
+        # assert len(self.parents_of(target_node)) == 0
         node_alphabet = self.node_alphabets[target_node]
         target_conditional = np.array([1 if v == value else 0 for v in node_alphabet])
         new_conditionals = {
@@ -525,7 +526,16 @@ class DiscreteDAG(FunctionalDAG):
         )
         return dag, node_order, values2nums
 
-    def fit(self, data, node_alphabets=None, method="mle", **kwargs):
+    @classmethod
+    def fit(
+        cls, 
+        dag: DAG, 
+        data: np.ndarray,
+        node2parents=None,
+        node_alphabets=None, 
+        method="mle", 
+        **kwargs
+    ):
         methods = {
             "mle", 
             "add_one_mle", 
@@ -536,20 +546,26 @@ class DiscreteDAG(FunctionalDAG):
         if method not in methods:
             raise NotImplementedError
         
+        if node2parents is None:
+            node2parents = dict()
+            for node in dag.nodes:
+                node2parents[node] = list(dag.parents_of(node))
+        
         if node_alphabets is None:
             node_alphabets = dict()
-            for node in self.nodes:
+            for node in dag.nodes:
                 alphabet = list(range(max(data[:, node]) + 1))
                 node_alphabets[node] = alphabet
                 
         conditionals = dict()
-        nodes = self.topological_sort()
+        nodes = dag.topological_sort()
         if method in {"random_forest", "xgboost", "logistic"}:
             for node in nodes:
-                parents = self.node2parents[node]
+                parents = node2parents[node]
                 alphabet = node_alphabets[node]
                 if len(parents) == 0:
-                    conditionals[node] = get_conditional(data, node, alphabet, [], [], add_one=False)
+                    alpha = kwargs.get("alpha", 1)
+                    conditionals[node] = get_conditional(data, node, alphabet, [], [], add_one=False, alpha=alpha)
                 else:
                     parent_alphabets = [node_alphabets[p] for p in parents]
                     node_alphabet = node_alphabets[node]
@@ -568,17 +584,24 @@ class DiscreteDAG(FunctionalDAG):
                         conditionals[node] = extract_conditional(model, parent_alphabets, node_alphabet)
         else:
             add_one = method == "add_one_mle"
+            alpha = kwargs.get("alpha", 1)
             for node in nodes:
-                parents = self.node2parents[node]
+                parents = node2parents[node]
                 alphabet = node_alphabets[node]
                 
                 if len(parents) == 0:
-                    conditionals[node] = get_conditional(data, node, alphabet, [], [], add_one=add_one)
+                    conditionals[node] = get_conditional(data, node, alphabet, [], [], add_one=add_one, alpha=alpha)
                 else:
                     parent_alphabets = [node_alphabets[p] for p in parents]
-                    conditionals[node] = get_conditional(data, node, alphabet, parents, parent_alphabets, add_one=add_one)
+                    conditionals[node] = get_conditional(data, node, alphabet, parents, parent_alphabets, add_one=add_one, alpha=alpha)
             
-        self.conditionals = conditionals
+        return DiscreteDAG(
+            dag.nodes,
+            dag.arcs,
+            conditionals,
+            node2parents,
+            node_alphabets
+        )
 
     def get_efficient_influence_function_conditionals(
         self, 
