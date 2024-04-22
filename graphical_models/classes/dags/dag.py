@@ -392,7 +392,7 @@ class DAG:
         ancestors = set()
         if not isinstance(nodes, set):
             self._add_ancestors(ancestors, nodes)
-        else:
+        elif len(nodes) != 0:
             return set.union(*(self.ancestors_of(node) for node in nodes))
         return ancestors
 
